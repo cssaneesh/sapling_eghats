@@ -1,0 +1,20 @@
+---
+title: "LUI"
+author: "Saneesh"
+date: "2022-12-01"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+$LUI_i=\frac12(gi/gm)+\frac12(ti/tm)$  
+
+$gi$=the number of grazing goats at site $i$
+$ti$=the area of trenches in the seedling transect of site $i$
+$gm$=The mean number of grazing goats across all sites
+$tm$=the mean area of trenches in the seedling transect across all sites
+

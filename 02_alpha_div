@@ -1,0 +1,33 @@
+MODEL for S
+______________
+S is the number of species in a given area or community. It is a measure of species richness and represents the total number of different species present.
+
+    The response variable "S" is modeled as a function of the predictor variables "treatment" and "LUI", with a random intercept for the grouping variable "site". The formula "(1 | site)" specifies that the intercepts for each level of "site" are allowed to vary randomly around a group-level mean.
+    The "family" argument specifies the distributional assumption of the model. In this case, the "poisson()" function is used to specify that the response variable "S" is distributed binomially.
+    The "data" argument specifies the data set to be used in the analysis. In this case, the data is taken from a data frame called "alpha_summary".
+    The "cores" argument specifies the number of CPU cores to be used for parallel processing. In this case, 4 cores are used.
+    The "chains" argument specifies the number of Markov chains to be used in the analysis. In this case, 4 chains are used.
+    The "control" argument specifies additional tuning parameters for the MCMC sampler. In this case, the "adapt_delta" parameter is set to 0.9 to improve the efficiency of the sampler.
+
+Overall, this code is fitting a Bayesian regression model to investigate the relationship between the response variable "S" and the predictor variables "treatment" and "LUI", while accounting for the effect of the grouping variable "site". The model assumes that the response variable is distributed binomially. The MCMC sampler is run using 4 chains with 4 cores and a tuning parameter of 0.9 to ensure efficient sampling.
+
+MODEL for Sn 
+______________
+Sn is the number of species that are unique to a particular area or community. It is a measure of species endemism and represents the total number of species that are found only in that area and nowhere else.)
+
+Sn_alpha <- brms::brm(Sn ~ treatment + LUI + (1 | site),
+                            family = lognormal(),
+                            data = alpha_summary,
+                            cores = 4,
+                            chains = 4,
+                            control = list(adapt_delta = 0.9) 
+                              )
+
+    The response variable "Sn" is modeled as a function of the predictor variables "treatment" and "LUI", with a random intercept for the grouping variable "site". The formula "(1 | site)" specifies that the intercepts for each level of "site" are allowed to vary randomly around a group-level mean.
+    The "family" argument specifies the distributional assumption of the model. In this case, the "lognormal()" function is used to specify that the response variable "Sn" is log-normally distributed.
+    The "data" argument specifies the data set to be used in the analysis. In this case, the data is taken from a data frame called "alpha_summary".
+    The "cores" argument specifies the number of CPU cores to be used for parallel processing. In this case, 4 cores are used.
+    The "chains" argument specifies the number of Markov chains to be used in the analysis. In this case, 4 chains are used.
+    The "control" argument specifies additional tuning parameters for the MCMC sampler. In this case, the "adapt_delta" parameter is set to 0.9 to improve the efficiency of the sampler.
+
+Overall, this code is fitting a Bayesian regression model to investigate the relationship between the response variable "Sn" and the predictor variables "treatment" and "LUI", while accounting for the effect of the grouping variable "site". The model assumes that the response variable is log-normally distributed. The MCMC sampler is run using 4 chains with 4 cores and a tuning parameter of 0.9 to ensure efficient sampling.
