@@ -2,6 +2,8 @@
 source('seedling_01_data.R')
 # Analysis----
 Site_prep_iNext <- seedling.dat %>%
+  filter(seedling>0) %>% 
+  filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
   mutate(species = sci.name) %>%
   arrange(site, treatment) %>%
   select(-c(sci.name, adult, adu.stat, LUI)) %>%
@@ -16,12 +18,19 @@ Site.list <- Site_prep_iNext %>%
 Site.matrix.list <- purrr::map(
   Site.list,
   ~ .x %>%
-    select(species, site, pres) %>%
+    select(species, 
+           site, 
+           pres,
+           # seedling
+           ) %>%
     distinct() %>%
-    spread(key = site, value = pres) %>%
+    spread(key = site, 
+           value = pres,
+           # value = seedling
+           ) %>%
     replace(is.na(.), 0) %>%
     column_to_rownames(var = "species")
-)
+)  
 
 #  Taxonomic diversity
 TD_treat_out <-
@@ -29,6 +38,8 @@ TD_treat_out <-
     data = Site.matrix.list,
     diversity = 'TD',
     q = c(0, 1, 2),
+    # datatype= 'abundance' ,
+    # datatype = 'incidence_freq',
     datatype = 'incidence_raw',
     size = c(1:50),
     nboot = 0
@@ -42,8 +53,12 @@ TD_treat_out$DataInfo
 # SC = Sample coverage
 
 TD_treat_out$AsyEst # to see the asymptotic diversity estimates
-
-
+TD_treat_out$AsyEst %>% filter(Diversity== 'Simpson diversity') %>%  # q=2 (Simpson diversity) 
+select(-s.e., - LCL, -UCL) %>% 
+  rename (Treatment = Assemblage) %>% 
+  mutate(Treatment= fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) %>% 
+  arrange(Treatment) %>% 
+  gt()
 # Make df for ploting----
 Site.TD.df <- TD_treat_out %>%
   purrr::pluck("iNextEst", "size_based")
@@ -51,7 +66,8 @@ Site.TD.df <- TD_treat_out %>%
 Site_info <- Site_prep_iNext %>%
   distinct() %>% mutate(Assemblage = as.character(treatment))
 
-Site.hill.TD <- Site.TD.df %>% left_join(Site_info, multiple = 'all') %>%
+Site.hill.TD <-
+  Site.TD.df %>% left_join(Site_info, multiple = 'all') %>%
   mutate(Order.q  = case_when(Order.q  == "0" ~ "q = 0", # q=0 species richness
                               Order.q == "1" ~ "q = 1", # q=1 Shannon diversity
                               Order.q == "2" ~ "q = 2")) %>% # q=2 Simpson diversity or evenness
@@ -69,7 +85,7 @@ df.line$Method <- factor(df.line$Method,
 # Plot----
 treatment_colors <- c("Control" = "#3b5d4d", "CPFA" = "#c5af99","CAFA" = "#ffd365")
 
-fig_6 <- ggplot(Site.hill.TD ,
+r.curve <- ggplot(Site.hill.TD ,
                 aes(x = nt, y = qD,   color = treatment)) +
   facet_wrap( ~ Order.q) +
   geom_point(aes(),
@@ -90,10 +106,10 @@ fig_6 <- ggplot(Site.hill.TD ,
     panel.background = element_rect(fill = "white")
   )
 
-fig_6
+r.curve
 
 (
-  fig_6 +
+  r.curve +
     theme(plot.caption = element_text(
       size = 8, face = "italic",
       hjust = 0.0

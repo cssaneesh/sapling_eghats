@@ -1,18 +1,39 @@
-source('01_seedling_data.R')
+source('seedling_01_data.R')
 
 # alpha diversity seedling----
-alpha_sum_sd <- seedling.dat %>% # alpha_summary_sd, sd= seedling
-  group_by(site, treatment, LUI, sci.name) %>%
+species.level_sd <- seedling.dat %>% # alpha_summary_sd, sd= seedling
+  filter(seedling>0) %>% 
+  group_by(site, treatment, LUI, sci.name, adult) %>%
   summarise(abundance= sum(seedling)) %>%
-  ungroup() %>%
+  ungroup()
+
+species.level_ad <- seedling.dat %>% # alpha_summary_sd, ad= adult trees
+  group_by(site, treatment, LUI, sci.name) %>%
+  summarise(abundance= sum(adult)) %>%
+  ungroup()
+
+# data preparation for calculating alpha
+alpha_sum_sd <- seedling.dat %>%
+  group_by(site, treatment, sci.name, village) %>%
+  summarise(abundance= sum(adult),.groups = 'drop') %>% # abundance of adult trees
+  group_by(site, treatment, village) %>%
+  summarise (Sp.adu = n_distinct(sci.name),
+             # number of unique species/richness
+             Nu.adu = sum(abundance),
+             # total number of adult trees
+             .groups = "drop") %>% # add the total number of adults in each site
+  left_join(seedling.dat %>% select(!adult), multiple = "all") %>% 
+  group_by(site, treatment, sci.name, LUI, Sp.adu, Nu.adu, village) %>%
+  summarise(abundance= sum(seedling), .groups = 'drop') %>% # abundance of seedling
+  filter(abundance>0) %>% 
   # calculate metrics for each site
-  group_by(site, treatment, LUI) %>%
+  group_by(site, treatment, village, LUI, Sp.adu, Nu.adu) %>%
   summarise (
     coverage = iNEXT.3D::DataInfo3D(abundance)$SC,
     S = n_distinct(sci.name),
     # number of unique species/richness
     N = sum(abundance),
-    # total number of saplings
+    # total number of seedlings
     S_PIE = mobr::calc_PIE(abundance, ENS = T),
     # Simpson's evenness index
     ENSPIE = vegan::diversity(abundance, index = 'invsimpson'),
@@ -30,13 +51,13 @@ alpha_sum_sd %>% group_by(treatment) %>%
 # individual based rarefaction before fitting models----
 
 alpha_data_sd <- seedling.dat %>% # sd= seedling
-    # first collate the transects at each unique location
-  group_by(site, treatment, sci.name, LUI ) %>%
-  summarise(abundance= sum(seedling)) %>%
-  ungroup() %>%
+  select(-adu.stat) %>% 
+  filter(seedling>0) %>%  # get rid of all sites with adults but 0 seedlings
+  group_by(site, treatment, sci.name) %>%
+  summarise(abundance= sum(seedling), .groups = 'drop') %>%
   inner_join(alpha_sum_sd %>% ungroup() %>% 
-               dplyr::select(site, LUI, minN),
-             by = c('site', 'LUI')) %>% 
+               dplyr::select(site, LUI, Sp.adu, Nu.adu, village,  minN),
+             by = c('site')) %>% 
   # next for calculating Sn
   group_by(site, LUI) %>% 
   nest(data=c(sci.name, abundance, minN)) %>% 
@@ -46,207 +67,599 @@ alpha_data_sd <- seedling.dat %>% # sd= seedling
 
 # put Sn into the alpha_summary df
 alpha_sum_sd <- inner_join(alpha_sum_sd %>% ungroup(), 
-                            alpha_data_sd %>% dplyr::select(site, treatment, Sn, LUI),
-                            by = c('site', 'treatment', 'LUI'))
+                            alpha_data_sd %>% 
+                             dplyr::select(site, treatment, Sn, village),
+                            by = c('site', 'treatment', 'village')
+                           )
 
 # Models-----
-
+# N ~ treatment----
 names(alpha_sum_sd)
-# number of individuals vs. treatment and LUI
+# number of individuals vs. treatment, LUI and number of adult trees 
+
+boxplot(N ~ site, data = alpha_sum_sd) # not using site as a random effect
+boxplot(N ~ village, data = alpha_sum_sd) # village as a random effect
 
 # N.alpha_sd <-
 #   brm(
-#     N ~ treatment + LUI + (1 | site),
+#     N ~ treatment + LUI + Nu.adu + (1|village),
 #     family = poisson(),
 #     data = alpha_sum_sd,
 #     cores = 4,
 #     chains = 4,
 #     control = list(adapt_delta = 0.9)
 #   )
-
 # save(N.alpha_sd, file= 'N.alpha_sd.Rdata')
 
 load('N.alpha_sd.Rdata')
-summary(N.alpha_sd)
+
 pp_check(N.alpha_sd)
-
 plot(N.alpha_sd)
+plot.residuals <- cbind(alpha_sum_sd, residuals(N.alpha_sd))
+plot.residuals <- as.data.frame(plot.residuals)
+# plot residuals, treatment
+plot.residuals %>% 
+  ggplot(aes(x= treatment, y= Estimate))+
+  geom_boxplot()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
 
-# check model residual
-alpha_sum_sd %>% 
-  add_residual_draws(N.alpha_sd) %>% 
-  median_qi(.residual) %>% 
-  ggplot(aes(sample= .residual))+
-  geom_qq()+
-  geom_qq_line()
+# plot residuals lui
+plot.residuals %>% 
+  ggplot(aes(x= LUI, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+
+# plot residuals total adult
+plot.residuals %>% 
+  ggplot(aes(x= Nu.adu, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
 
 
-conditional_effects(
-    N.alpha_sd,
-    effects = 'treatment', # conditional effects of treatment
-    re_formula = NA,
-    method = 'fitted'
-  )  
+summary(N.alpha_sd)
+
+conditional_effects(N.alpha_sd)
+
+# ce= conditional effects of treatment
+N.alpha_sd_ce_t <- conditional_effects(N.alpha_sd, effects = 'treatment')
+N.alpha_sd_ce_lui <- conditional_effects(N.alpha_sd, effects = 'LUI')
+N.alpha_sd_ce_Nu.adul <- conditional_effects(N.alpha_sd, effects = 'Nu.adu')
+
+# N ~ treatment
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = treatment, # predicting variable
+        y = N, # response variable
+        ),
+    color = "grey",
+    size = 1.2,
+    alpha = 0.9,
+    position = position_jitter(width = 0.05, height = 0.45)
+  ) +
+  geom_point(
+    data = N.alpha_sd_ce_t$treatment,
+    # conditional effect
+    aes(x = treatment, # ce of the predicting variable
+        y = estimate__,
+        col = treatment),
+    size = 3
+  ) +
+  geom_errorbar(
+    data = N.alpha_sd_ce_t$treatment,
+    aes(
+      x = treatment,
+      ymin = lower__,
+      ymax = upper__,
+      col = treatment
+    ),
+    linewidth = 1.3,
+    width = 0.1
+  ) 
+
+# N ~ LUI
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = LUI, # predicting variable
+        y = N, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = N.alpha_sd_ce_lui$LUI,
+    # conditional effect
+    aes(x = LUI, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# N ~ number of adult trees
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Nu.adu, # predicting variable
+        y = N, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = N.alpha_sd_ce_Nu.adul$Nu.adu,
+    # conditional effect
+    aes(x = Nu.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm' )
 
 
-  conditional_effects(
-    N.alpha_sd,
-    effects = 'LUI', # conditional effects of LUI
-    re_formula = NA,
-    method = 'fitted'
-  )
-
-# number of species vs treatment and LUI
+# S ~ treatment----
+# number of species vs treatment LUI and number of adult trees and species
 # poisson error for species richness
-
-  # S.alpha.rich_sd <-
-  # brm(
-  #   S ~ treatment + LUI + (1 | site),
-  #   family = poisson(),
-  #   data = alpha_sum_sd,
-  #   cores = 4,
-  #   chains = 4,
-  #   control = list(adapt_delta = 0.9)
-  # )
-
+boxplot(S ~ village, data = alpha_sum_sd) # village as a random effect
+# S.alpha.rich_sd <-
+#   brm(
+#     S ~ treatment + LUI + Sp.adu + Nu.adu + (1 | village),
+#     family = poisson(),
+#     data = alpha_sum_sd,
+#     cores = 4,
+#     chains = 4,
+#     control = list(adapt_delta = 0.9)
+#   )
 # save(S.alpha.rich_sd, file= 'S.alpha.rich_sd.Rdata')
 
 load('S.alpha.rich_sd.Rdata')
 
-summary(S.alpha.rich_sd)
-
 pp_check(S.alpha.rich_sd)
-
 plot(S.alpha.rich_sd)
 
-# check model residuals
+plot.residuals <- cbind(alpha_sum_sd, residuals(S.alpha.rich_sd) )
+plot.residuals <- as.data.frame(plot.residuals)
+# plot residuals treatment
+plot.residuals %>% 
+  ggplot(aes(x= treatment, y= Estimate))+
+  geom_boxplot()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# plot residuals LUI
+plot.residuals %>% 
+  ggplot(aes(x= LUI, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# plot residuals total adults
+plot.residuals %>% 
+  ggplot(aes(x= Nu.adu, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# plot residuals species adults
+plot.residuals %>% 
+  ggplot(aes(x= Sp.adu, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
 
-alpha_sum_sd %>%
-  add_residual_draws(S.alpha.rich_sd) %>%
-  median_qi() %>%
-  ggplot(aes(sample = .residual)) +
-  geom_qq() +
-  geom_qq_line()
+summary(S.alpha.rich_sd)
 
-# seedling richness----
-  conditional_effects(
-    S.alpha.rich_sd,
-    effects = 'treatment', # conditional effects of treatment on richness
-    re_formula = NA,
-    method = 'fitted'
-  )  
+conditional_effects(S.alpha.rich_sd)
 
-conditional_effects(
-  S.alpha.rich_sd,
-  effects = 'LUI', # conditional effects of LUI on richness
-  re_formula = NA,
-  method = 'fitted'
-) 
+S.alpha.rich_sd_t <- conditional_effects(S.alpha.rich_sd, effects = 'treatment') #
+S.alpha.rich_sd_lui <- conditional_effects(S.alpha.rich_sd, effects = 'LUI')
+S.alpha.rich_sd_Nu.adu <- conditional_effects(S.alpha.rich_sd, effects = 'Nu.adu')
+S.alpha.rich_sd_Sp.adu <- conditional_effects(S.alpha.rich_sd, effects = 'Sp.adu') #
 
-# Expected number of species for n individuals vs treatment and LUI
+conditional_effects(S.alpha.rich_sd, effects = 'treatment:LUI')
+conditional_effects(S.alpha.rich_sd, effects = 'treatment:Nu.adu')
+conditional_effects(S.alpha.rich_sd, effects = 'treatment:Sp.adu')
+# plot S ~ treatment
+
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = treatment, # predicting variable
+        y = S, # response variable, no of species observed at each site
+        ),
+    col= 'grey',
+    size = 1.2,
+    alpha = 0.9,
+    position = position_jitter(width = 0.05, height = 0.45)
+  ) +
+  geom_point(
+    data = S.alpha.rich_sd_t$treatment,
+    # conditional effect
+    aes(x = treatment, # ce of the predicting variable
+        y = estimate__,
+        col = treatment),
+    size = 3
+  ) +
+  geom_errorbar(
+    data = S.alpha.rich_sd_t$treatment,
+    aes(
+      x = treatment,
+      ymin = lower__,
+      ymax = upper__,
+      col = treatment
+    ),
+    linewidth = 1.3,
+    width = 0.1
+  ) 
+
+# S ~ LUI
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = LUI, # predicting variable
+        y = S, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = S.alpha.rich_sd_lui$LUI,
+    # conditional effect
+    aes(x = LUI, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# S ~ Nu.adu
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Nu.adu, # predicting variable
+        y = S, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = S.alpha.rich_sd_Nu.adu$Nu.adu,
+    # conditional effect
+    aes(x = Nu.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# S ~ Sp.adu
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Sp.adu, # predicting variable
+        y = S, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = S.alpha.rich_sd_Sp.adu$Sp.adu,
+    # conditional effect
+    aes(x = Sp.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# Sn ~ treatment----
+# Rarefied richness vs treatment, adult trees and LUI
 # lognormal for Sn
+boxplot(Sn ~ village, data = alpha_sum_sd)
 
-Sn_alpha_sd <- brms::brm(Sn ~ treatment + LUI + (1 | site),
-                      family = lognormal(),
-                      data = alpha_sum_sd,
-                      cores = 4,
-                      chains = 4,
-                      control = list(adapt_delta = 0.9)
-)
+alpha_sum_sd %>% 
+  ggplot(aes(Sn))+
+  geom_density()+
+  geom_vline(aes(xintercept = mean(Sn)))+
+  xlim(0.5,3)
 
-#save(Sn_alpha_sd, file='Sn_alpha_sd.Rdata')
- 
-#load('Sn_alpha_sd.Rdata')
+alpha_sum_sd %>% 
+  ggplot(aes(y=Sn, x= treatment))+
+  geom_boxplot()+
+  stat_summary(geom = 'point',
+               fun= mean,
+               col= 'red')
+  
+
+# Sn_alpha_sd <- brm(
+#   Sn ~ treatment + LUI + Nu.adu + Sp.adu + (1 | village),
+#   family = lognormal() ,
+#   data = alpha_sum_sd,
+#   cores = 4,
+#   chains = 4,
+#   control = list(adapt_delta = 0.9)
+# )
+# save(Sn_alpha_sd, file='Sn_alpha_sd.Rdata')
+
+load('Sn_alpha_sd.Rdata')
+
+pp_check(Sn_alpha_sd)
+plot(Sn_alpha_sd)
+
+plot.residuals <- cbind(alpha_sum_sd, residuals(Sn_alpha_sd) )
+plot.residuals <- as.data.frame(plot.residuals)
+# plot residuals treatment
+plot.residuals %>% 
+  ggplot(aes(x= treatment, y= Estimate))+
+  geom_boxplot()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# plot residuals LUI
+plot.residuals %>% 
+  ggplot(aes(x= LUI, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# plot residuals total adults
+plot.residuals %>% 
+  ggplot(aes(x= Nu.adu, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# plot residuals species adults
+plot.residuals %>% 
+  ggplot(aes(x= Sp.adu, y= Estimate))+
+  geom_point()+
+  geom_hline(yintercept = 0, lty= 2, col= 'red')
 
 summary(Sn_alpha_sd)
-pp_check(Sn_alpha_sd)
 
-# check model residual
-alpha_summary_sd %>%
-  add_residual_draws(Sn_alpha_sd) %>%
-  median_qi(.residual) %>%
-  ggplot(aes(sample= .residual))+
-  geom_qq()+
-  geom_qq_line()
+conditional_effects(Sn_alpha_sd)
 
-ghats_Sn_alpha_sd <-
-  conditional_effects(
-    Sn_alpha_sd,
-    effects = 'treatment',
-    re_formula = NA,
-    method = 'fitted'
-  )  # conditional effects
-
-ghats_Sn_alpha_sd
-
-# lognormal error for S_SPIE
-
-S_PIE_alpha_sd <- brms::brm(
-  S_PIE ~ treatment + LUI + (1 | site),
-                         family = lognormal(),
-                         data = alpha_summary_sd,
-                         cores = 4,
-                         chains = 4,
-                         control = list(adapt_delta = 0.9)
-)
- 
-# save(S_PIE_alpha_sd, file = 'S_PIE_alpha_sd.Rdata')
- 
-load('S_PIE_alpha_sd.Rdata')
- 
-summary(S_PIE_alpha_sd)
-pp_check(S_PIE_alpha_sd)
-
-# check model residual
-alpha_summary_sd %>% 
-  add_residual_draws(S_PIE_alpha_sd) %>%
-  median_qi(.residual) %>%
-  ggplot(aes(sample= .residual))+
-  geom_qq()+
-  geom_qq_line()
- 
-ghats_S_PIE_alpha_sd <-
-  conditional_effects(
-    S_PIE_alpha_sd,
-    effects = 'treatment',
-    re_formula = NA,
-    method = 'fitted'
-  )  # conditional effects
- 
-ghats_S_PIE_alpha_sd
+Sn_alpha_sd_t <- conditional_effects(Sn_alpha_sd, effects = 'treatment')
+Sn_alpha_sd_t_Nu.adu <- conditional_effects(Sn_alpha_sd, effects = 'Nu.adu')
+Sn_alpha_sd_t_Sp.adu <- conditional_effects(Sn_alpha_sd, effects = 'Sp.adu')
+Sn_alpha_sd_t_LUI <- conditional_effects(Sn_alpha_sd, effects = 'LUI')
 
 
-ENSPIE_alpha_sd <- brms::brm(ENSPIE ~ treatment + LUI + (1 | site),
-                          family = 'lognormal',
-                          data = alpha_sum_sd,
-                          iter = 10000,
-                          warmup = 1000,
-                          cores = 4,
-                          chains = 4,
-                          #control = list(adapt_delta = 0.9)
-)
+# Sn ~ treatment
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = treatment, # predicting variable
+        y = Sn, # response variable, no of species observed at each site
+    ),
+    col= 'grey',
+    size = 1.2,
+    alpha = 0.9,
+    position = position_jitter(width = 0.05, height = 0.45)
+  ) +
+  geom_point(
+    data = Sn_alpha_sd_t$treatment,
+    # conditional effect
+    aes(x = treatment, # ce of the predicting variable
+        y = estimate__,
+        col = treatment),
+    size = 3
+  ) +
+  geom_errorbar(
+    data = Sn_alpha_sd_t$treatment,
+    aes(
+      x = treatment,
+      ymin = lower__,
+      ymax = upper__,
+      col = treatment
+    ),
+    linewidth = 1.3,
+    width = 0.1
+  ) 
 
-save(ENSPIE_alpha_sd, file = 'ENSPIE_alpha_sd.Rdata')
+# Sn ~ LUI
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = LUI, # predicting variable
+        y = Sn, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = Sn_alpha_sd_t_LUI$LUI,
+    # conditional effect
+    aes(x = LUI, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# Sn ~ Nu.adu
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Nu.adu, # predicting variable
+        y = Sn, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = Sn_alpha_sd_t_Nu.adu$Nu.adu,
+    # conditional effect
+    aes(x = Nu.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# Sn ~ Sp.adu
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Sp.adu, # predicting variable
+        y = Sn, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = Sn_alpha_sd_t_Sp.adu$Sp.adu,
+    # conditional effect
+    aes(x = Sp.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+
+
+
+# ENSPIE ~ treatment----
+# evenness vs treatment, adult trees and LUI
+# lognormal for ENSPIE
+hist(alpha_sum_sd$ENSPIE)
+
+select(alpha_sum_sd, site, ENSPIE) %>% 
+  unique %>% 
+  count( site ) %>% 
+  subset( n > 1 )
+
+select(alpha_sum_sd, village, ENSPIE) %>% 
+  unique %>% 
+  count( village ) %>% 
+  subset( n > 1 )
+
+
+hist(alpha_sum_sd$ENSPIE) # use lognormal for ENSPIE
+
+alpha_sum_sd %>% 
+  ggplot(aes(x= ENSPIE))+
+  geom_density()+
+  geom_vline(aes(xintercept = mean(ENSPIE))) # use lognormal for ENSPIE
+
+boxplot(ENSPIE ~ site, data = alpha_sum_sd) # for random effect
+boxplot(ENSPIE ~ village, data = alpha_sum_sd) # for random effect
+
+# ENSPIE_alpha_sd <- brm(
+#   ENSPIE ~ treatment + Nu.adu + Sp.adu + LUI + (1 | village),
+#   # family= Gamma(),
+#   family = lognormal(),
+#   data = alpha_sum_sd,
+#   cores = 4,
+#   chains = 4,
+#   control = list(adapt_delta = 0.9)
+# )
+# save(ENSPIE_alpha_sd, file = 'ENSPIE_alpha_sd.Rdata')
 
 load('ENSPIE_alpha_sd.Rdata')
 
-summary(ENSPIE_alpha_sd)
-pp_check(ENSPIE_alpha_sd)
+pp_check(ENSPIE_alpha_sd, ndraws = 30)
+plot(ENSPIE_alpha_sd)
 
 # check model residual
-alpha_sum_sd %>% 
-  add_residual_draws(ENSPIE_alpha_sd) %>% 
-  median_qi(.residual) %>% 
-  ggplot(aes(sample= .residual))+
-  geom_qq()+
-  geom_qq_line()
+plot.residuals <- cbind(alpha_sum_sd, residuals(ENSPIE_alpha_sd))
+plot.residuals <- as.data.frame(plot.residuals)
 
-# seedling eveness-----
+plot(plot.residuals$treatment, plot.residuals$Estimate) # treatment
+abline(h=0, lty=2, col= 'red')
 
-  conditional_effects(
-    ENSPIE_alpha_sd,
-    effects = 'treatment',
-    re_formula = NA,
-    method = 'fitted'
-  )  # conditional effects
+plot(plot.residuals$LUI, plot.residuals$Estimate) # LUI
+abline(h=0, lty=2, col= 'red')
+
+
+plot(plot.residuals$Nu.adu, plot.residuals$Estimate) # number of adult trees
+abline(h=0, lty=2, col= 'red')
+
+plot(plot.residuals$Sp.adu, plot.residuals$Estimate) # number of adult species
+abline(h=0, lty=2, col= 'red')
+
+summary(ENSPIE_alpha_sd)
+# seedling evenness-----
+conditional_effects(ENSPIE_alpha_sd)  # conditional effects
+
+ENSPIE_alpha_sd_t <- conditional_effects(ENSPIE_alpha_sd, effects = 'treatment')
+ENSPIE_alpha_sd_t_Nu.adu <- conditional_effects(ENSPIE_alpha_sd, effects = 'Nu.adu')
+ENSPIE_alpha_sd_t_Sp.adu <- conditional_effects(ENSPIE_alpha_sd, effects = 'Sp.adu')
+ENSPIE_alpha_sd_t_LUI <- conditional_effects(ENSPIE_alpha_sd, effects = 'LUI')
+
+# ENSPIE ~ treatment
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = treatment, # predicting variable
+        y = ENSPIE, # response variable, no of species observed at each site
+    ),
+    col= 'grey',
+    size = 1.2,
+    alpha = 0.9,
+    position = position_jitter(width = 0.05, height = 0.45)
+  ) +
+  geom_point(
+    data = ENSPIE_alpha_sd_t$treatment,
+    # conditional effect
+    aes(x = treatment, # ce of the predicting variable
+        y = estimate__,
+        col = treatment),
+    size = 3
+  ) +
+  geom_errorbar(
+    data = ENSPIE_alpha_sd_t$treatment,
+    aes(
+      x = treatment,
+      ymin = lower__,
+      ymax = upper__,
+      col = treatment
+    ),
+    linewidth = 1.3,
+    width = 0.1
+  ) 
+
+# ENSPIE ~ LUI
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = LUI, # predicting variable
+        y = ENSPIE, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = ENSPIE_alpha_sd_t_LUI$LUI,
+    # conditional effect
+    aes(x = LUI, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# ENSPIE ~ Nu.adu
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Nu.adu, # predicting variable
+        y = ENSPIE, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = ENSPIE_alpha_sd_t_Nu.adu$Nu.adu,
+    # conditional effect
+    aes(x = Nu.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+# ENSPIE ~ Sp.adu
+ggplot() +
+  geom_point(
+    data = alpha_sum_sd,
+    # raw data
+    aes(x = Sp.adu, # predicting variable
+        y = ENSPIE, # response variable
+        col= treatment),
+    size = 1.2,
+    alpha = 0.5,
+    position = position_jitter(width = 0.05, height = 0.45)
+  )+
+  geom_smooth(
+    data = ENSPIE_alpha_sd_t_Sp.adu$Sp.adu,
+    # conditional effect
+    aes(x = Sp.adu, # ce of the predicting variable
+        y = estimate__),
+    linewidth = 1, method = 'lm')
+
+
 

@@ -1,7 +1,5 @@
 source('sapling_01_data.R')
 
-# ref: 06a_gamma_scale_all_fishres.R
-
 # We have more samples in CAFA
 
 visit_01.lui %>% group_by(treatment, village) %>%
@@ -25,12 +23,12 @@ gamma_data <- visit_01.lui %>%
   mutate(Treatment = fct_relevel(treatment, c("Control", "CPFA", "CAFA"))) %>%
   arrange(Treatment)
 
-# for n_samples, get 10 sites (alpha data) from CAFA
+# for n_samples, get 13 sites (alpha data) from Control
 
-n_sites = 10
+n_sites = 13
 n_samps =200
 
-gamma_metrics <- tibble()
+gamma_metrics_sap <- tibble()
 
 for (i in 1:n_samps) {
   print(i)
@@ -69,7 +67,7 @@ for (i in 1:n_samps) {
     ungroup() %>%
     mutate(minrel = min(gamma_rel_count))
   # calculate the metrics we want
-  gamma_metrics <- gamma_metrics %>%
+  gamma_metrics_sap <- gamma_metrics_sap %>%
     bind_rows(
       sub_samp %>%
         group_by(treatment) %>%
@@ -92,12 +90,12 @@ for (i in 1:n_samps) {
     )
 }
 
-save(gamma_metrics, file= 'gamma_metrics.Rdata')
+save(gamma_metrics_sap, file= 'gamma_metrics_sap.Rdata')
 
-load('gamma_metrics.Rdata')
+load('gamma_metrics_sap.Rdata')
 
-gamma_boot_results <-
-  gamma_metrics %>% # calculate beta-diversities (beta = gamma/alpha)
+gamma_boot_results_sap <-
+  gamma_metrics_sap %>% # calculate beta-diversities (beta = gamma/alpha)
   mutate(beta_S = S / alpha_S,
          beta_S_PIE = ENSPIE / alpha_Spie) %>%
   group_by(treatment) %>%
@@ -124,29 +122,31 @@ gamma_boot_results <-
   arrange(Treatment)
 
 # Beta----
-beta.sap <- gamma_boot_results %>% select(treatment, beta_S_mean , beta_S_Q5, beta_S_Q95) %>%
-  rename(Estimate = beta_S_mean,
+beta.sap <- gamma_boot_results_sap %>% select(treatment, beta_S_mean , beta_S_Q5, beta_S_Q95) %>%
+  rename(Treatment = treatment,
+    Estimate = beta_S_mean,
          Lower = beta_S_Q5,
          Upper = beta_S_Q95) %>%
-  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Beta', 3))
+  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Beta', 3)) %>% gt()
 
 beta.sap
 
 # Gamma----
-gamma.sap <- gamma_boot_results %>% select(treatment, S_mean , S_Q5, S_Q95) %>%
-  rename(Estimate = S_mean,
+gamma.sap <- gamma_boot_results_sap %>% select(treatment, S_mean , S_Q5, S_Q95) %>%
+  rename(Treatment = treatment, 
+         Estimate = S_mean,
          Lower = S_Q5,
          Upper = S_Q95) %>%
-  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Gamma', 3))
+  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Gamma', 3)) %>% gt()
 
 gamma.sap
 
 # plot results
-(gamma_S_all <- ggplot() +
-  geom_point(data = gamma_boot_results,
+gamma_S_all <- ggplot() +
+  geom_point(data = gamma_boot_results_sap,
              aes(x = Treatment, y = S_median, colour = Treatment),
              size = 4) +
-  geom_errorbar(data = gamma_boot_results,
+  geom_errorbar(data = gamma_boot_results_sap,
                 aes(x = Treatment, ymin = S_Q5, ymax = S_Q95, 
                     colour = Treatment),
                 linewidth = 1.3,
@@ -160,13 +160,15 @@ gamma.sap
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8)))
+        plot.tag.position = c(0.3, 0.8))
 
-(gamma_S_PIE_all <- ggplot() +
-  geom_point(data = gamma_boot_results,
+gamma_S_all
+
+gamma_S_PIE_all <- ggplot() +
+  geom_point(data = gamma_boot_results_sap,
              aes(x = Treatment, y = ENSPIE_median, colour = Treatment),
              size = 4) +
-  geom_errorbar(data = gamma_boot_results,
+  geom_errorbar(data = gamma_boot_results_sap,
                 aes(x = Treatment, ymin = ENSPIE_Q5, ymax = ENSPIE_Q95, 
                     colour = Treatment),
                 linewidth = 1.3,
@@ -179,14 +181,16 @@ gamma.sap
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8)))
+        plot.tag.position = c(0.3, 0.8))
+
+gamma_S_PIE_all
 
 
-(beta_S_all <- ggplot() +
-  geom_point(data = gamma_boot_results,
+beta_S_all <- ggplot() +
+  geom_point(data = gamma_boot_results_sap,
              aes(x = Treatment, y = beta_S_median, colour = Treatment),
              size = 4) +
-  geom_errorbar(data = gamma_boot_results,
+  geom_errorbar(data = gamma_boot_results_sap,
                 aes(x = Treatment, ymin = beta_S_Q5, ymax = beta_S_Q95, 
                     colour = Treatment),
                 linewidth = 1.3,
@@ -199,13 +203,15 @@ gamma.sap
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8)))
+        plot.tag.position = c(0.3, 0.8))
 
-(beta_S_PIE_all <- ggplot() +
-  geom_point(data = gamma_boot_results,
+beta_S_all
+
+beta_S_PIE_all <- ggplot() +
+  geom_point(data = gamma_boot_results_sap,
              aes(x = Treatment, y = beta_S_PIE_median, colour = Treatment),
              size = 4) +
-  geom_errorbar(data = gamma_boot_results,
+  geom_errorbar(data = gamma_boot_results_sap,
                 aes(x = Treatment, ymin = beta_S_PIE_Q5, ymax = beta_S_PIE_Q95, 
                     colour = Treatment),
                 linewidth = 1.3,
@@ -218,6 +224,8 @@ gamma.sap
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8)))
+        plot.tag.position = c(0.3, 0.8))
+
+beta_S_PIE_all
 
 

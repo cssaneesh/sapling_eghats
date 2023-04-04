@@ -1,23 +1,26 @@
-source('01_seedling_data.R')
+source('seedling_01_data.R')
 
-# ref: 06a_gamma_scale_all_fishres.R
-
-# We have more samples in CAFA
-
+# Comparing number of sites in treatments
 seedling.dat %>% 
   filter(seedling >0) %>% 
   group_by(treatment) %>% 
-  summarise(N_sites=n_distinct(site))
+  summarise(N_sites=n_distinct(site)) # We have more samples in CAFA
 
 # Solution, bootstrap sampling
 
 gamma_data <- seedling.dat %>% # alpha_summary_sd, sd= seedling
-  filter(seedling >0) %>% 
-  group_by(site, treatment, LUI, sci.name) %>%
-  summarise(abundance= sum(seedling)) %>%
+  filter(site!= 'APA19_CPFA') %>% # to avoid zero N and inf ENSPIE
+  filter(seedling>0) %>% 
+  filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
+  group_by(site) %>% 
+  summarise(tot.adult= sum(adult)) %>% # add the total number of adults in each site
+  left_join(seedling.dat %>% select(!adult), multiple = "all") %>% 
+  group_by(site, treatment, sci.name, LUI, tot.adult, village) %>%
+  summarise(abundance= sum(seedling)) %>% # abundance of seedling
   ungroup() %>%
+  filter(abundance>0) %>% 
   # calculate metrics for each site
-  group_by(site, treatment, LUI, sci.name, abundance) %>%
+  group_by(site, treatment, LUI, sci.name, tot.adult, abundance) %>%
   summarise (N = sum(abundance)) %>% 
   # total number of saplings
   ungroup() %>% 
@@ -30,7 +33,7 @@ gamma_data <- seedling.dat %>% # alpha_summary_sd, sd= seedling
 
 # for n_samples, get 10 sites (alpha data) from CAFA
 
-n_sites = 10
+n_sites = 11
 n_samps =200
 
 gamma_metrics <- tibble()
@@ -122,89 +125,134 @@ gamma_boot_results <-
     beta_S_PIE_Q95 = quantile(beta_S_PIE, probs = 0.95, names = F),
     beta_S_PIE_Q5 = quantile(beta_S_PIE, probs = 0.05, names = F)
   ) %>% 
-  #mutate(Treatment = factor(treatment)) %>% # to order treatments in the plot
+  # to order treatments in the plot
   mutate(Treatment = fct_relevel(treatment, c("Control", "CPFA", "CAFA"))) %>% 
   arrange(Treatment)
 
-# Beta----
-beta <- gamma_boot_results %>% select(treatment, beta_S_mean , beta_S_Q5, beta_S_Q95) %>%
-  rename(Estimate = beta_S_mean,
-         Lower = beta_S_Q5,
-         Upper = beta_S_Q95) %>%
-  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Beta', 3))
-
-beta
 
 # Gamma----
-gamma <- gamma_boot_results %>% select(treatment, S_mean , S_Q5, S_Q95) %>%
-  rename(Estimate = S_mean,
-         Lower = S_Q5,
-         Upper = S_Q95) %>%
-  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Gamma', 3))
+gamma <-
+  gamma_boot_results %>% select(treatment, S_median , S_Q5, S_Q95) %>%
+  rename(
+    Treatment = treatment,
+    Estimate = S_median,
+    Lower = S_Q5,
+    Upper = S_Q95
+  ) %>%
+  mutate_if(is.numeric, round, 2) %>% mutate('Scale' = rep('Gamma', 3)) %>% gt()
+
 
 gamma
 
 # plot results
-(gamma_S_all <- ggplot() +
-    geom_point(data = gamma_boot_results,
-               aes(x = Treatment, y = S_median, colour = Treatment),
-               size = 4) +
-    geom_errorbar(data = gamma_boot_results,
-                  aes(x = Treatment, ymin = S_Q5, ymax = S_Q95, 
-                      colour = Treatment),
-                  linewidth = 1.3,
-                  width = 0.1) +
-    scale_colour_grey() +
-    labs(x = '',
-         y = 'Species richness (S)'
-    ) +
-    theme_bw() +
-    theme(legend.position = 'none', 
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size = 16),
-          axis.title = element_text(size = 18),
-          plot.tag.position = c(0.3, 0.8)))
+gamma_S_plot <- ggplot() +
+  geom_point(data = gamma_boot_results,
+             aes(x = Treatment, y = S_median, colour = Treatment),
+             size = 4) +
+  geom_errorbar(data = gamma_boot_results,
+                aes(x = Treatment, ymin = S_Q5, ymax = S_Q95, 
+                    colour = Treatment),
+                linewidth = 1.3,
+                width = 0.1) +
+  scale_colour_grey() +
+  labs(x = '',
+       y = 'Species richness (S)'
+  ) +
+  theme_bw() +
+  theme(legend.position = 'none', 
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        plot.tag.position = c(0.3, 0.8))
 
-(gamma_S_PIE_all <- ggplot() +
-    geom_point(data = gamma_boot_results,
-               aes(x = Treatment, y = ENSPIE_median, colour = Treatment),
-               size = 4) +
-    geom_errorbar(data = gamma_boot_results,
-                  aes(x = Treatment, ymin = ENSPIE_Q5, ymax = ENSPIE_Q95, 
-                      colour = Treatment),
-                  linewidth = 1.3,
-                  width = 0.1) +
-    scale_colour_grey() +
-    labs(x = '',
-         y = expression(paste(S[PIE]))) +
-    theme_bw() +
-    theme(legend.position = 'none', 
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size = 16),
-          axis.title = element_text(size = 18),
-          plot.tag.position = c(0.3, 0.8)))
+gamma_S_plot
+
+gamma_S_PIE <-
+  gamma_boot_results %>% select(treatment, ENSPIE_median , ENSPIE_Q5, ENSPIE_Q95) %>%
+  rename( Treatment= treatment,
+    Estimate = ENSPIE_median,
+         Lower = ENSPIE_Q5,
+         Upper = ENSPIE_Q95) %>%
+  mutate_if(is.numeric, round, 2) %>% mutate('Scale' = rep('Gamma', 3)) %>% gt()
+
+gamma_S_PIE
+
+gamma_S_PIE_plot <- ggplot() +
+  geom_point(data = gamma_boot_results,
+             aes(x = Treatment, y = ENSPIE_median, colour = Treatment),
+             size = 4) +
+  geom_errorbar(data = gamma_boot_results,
+                aes(x = Treatment, ymin = ENSPIE_Q5, ymax = ENSPIE_Q95, 
+                    colour = Treatment),
+                linewidth = 1.3,
+                width = 0.1) +
+  scale_colour_grey() +
+  labs(x = '',
+       y = expression(paste(S[PIE]))) +
+  theme_bw() +
+  theme(legend.position = 'none', 
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        plot.tag.position = c(0.3, 0.8))
+
+gamma_S_PIE_plot
+
+# Beta----
+beta_S <-
+  gamma_boot_results %>% select(treatment, beta_S_median , beta_S_Q5, beta_S_Q95) %>%
+  rename(
+    Treatment = treatment,
+    Estimate = beta_S_median,
+    Lower = beta_S_Q5,
+    Upper = beta_S_Q95
+  ) %>%
+  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Beta', 3)) %>% gt()
+
+beta_S
+
+beta_S.plot <- gamma_boot_results %>% ggplot() +
+  geom_point(aes(x = treatment, y = beta_S_median, colour = treatment), size = 4) +
+  geom_errorbar(
+    aes(x = treatment, ymin = beta_S_Q5, ymax = beta_S_Q95, col= treatment),
+    linewidth = 1,
+    width = 0.1
+  )+
+  scale_colour_grey() +
+  labs(title = " ",
+       x = ' ',
+       y = expression(paste(italic(beta), "- species diversity (S)"))) +
+  theme_bw(base_size = 12) +
+  theme(
+    legend.position = 'none',
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    plot.tag.position = c(0.3, 0.8)
+  ) +
+  theme(
+    panel.grid.major = element_line(colour = "gray86", linewidth = 0.1),
+    panel.background = element_rect(fill = "white")
+  ) #+ labs(subtitle = 'b)')
+
+beta_S.plot
 
 
-(beta_S_all <- ggplot() +
-    geom_point(data = gamma_boot_results,
-               aes(x = Treatment, y = beta_S_median, colour = Treatment),
-               size = 4) +
-    geom_errorbar(data = gamma_boot_results,
-                  aes(x = Treatment, ymin = beta_S_Q5, ymax = beta_S_Q95, 
-                      colour = Treatment),
-                  linewidth = 1.3,
-                  width = 0.1) +
-    scale_colour_grey() +
-    labs(x = '',
-         y = expression(paste(italic(beta),'-S'))) +
-    theme_bw() +
-    theme(legend.position = 'none', 
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size = 16),
-          axis.title = element_text(size = 18),
-          plot.tag.position = c(0.3, 0.8)))
+beta_ENSPIE <-
+  gamma_boot_results %>% select(treatment, beta_S_PIE_median , beta_S_PIE_Q5, beta_S_PIE_Q95) %>%
+  rename(
+    Treatment = treatment,
+    Estimate = beta_S_PIE_median,
+    Lower = beta_S_PIE_Q5,
+    Upper = beta_S_PIE_Q95
+  ) %>%
+  mutate_if(is.numeric, round, 2) %>% mutate('Scale'= rep('Beta', 3)) %>% gt()
 
-(beta_S_PIE_all <- ggplot() +
+beta_ENSPIE
+
+names(gamma_boot_results)
+
+beta_S_PIE_all <- ggplot() +
     geom_point(data = gamma_boot_results,
                aes(x = Treatment, y = beta_S_PIE_median, colour = Treatment),
                size = 4) +
@@ -221,6 +269,7 @@ gamma
           panel.grid.minor = element_blank(),
           axis.text = element_text(size = 16),
           axis.title = element_text(size = 18),
-          plot.tag.position = c(0.3, 0.8)))
+          plot.tag.position = c(0.3, 0.8))
 
+beta_S_PIE_all
 

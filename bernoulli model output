@@ -1,0 +1,78 @@
+--------------------------
+logistic regression model
+using family= bernoulli()
+--------------------------
+
+model1 <- brm(
+  seedling.pre ~ adult * treatment * LUI + (1 | site), # to account for potential variation between sites.
+  family = bernoulli(), # the seedling are yes/no
+  data = seedling.dat.pre.ab,
+  prior = c(
+    prior(normal(0, 2), class = Intercept), # normal priors with mean 0 and standard deviation 2
+    prior(normal(0, 2), class = b), # normal priors with mean 0 and standard deviation 2
+    prior(normal(0, 2), class = sd) # normal priors with mean 0 and standard deviation 2
+  ),
+  iter = 3000,
+  warmup = 1000,
+  chains = 4,
+  cores = 4
+)
+
+------
+summary(model1)
+------
+
+ Family: bernoulli 
+  Links: mu = logit 
+Formula: seedling.pre ~ adult * treatment * LUI + (1 | site) 
+   Data: seedling.dat.pre.ab (Number of observations: 214) 
+  Draws: 4 chains, each with iter = 3000; warmup = 1000; thin = 1;
+         total post-warmup draws = 8000
+
+Group-Level Effects: 
+~site (Number of levels: 45) 
+              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sd(Intercept)     1.06      0.45     0.16     1.99 1.00     1440     1607
+
+Population-Level Effects: 
+                        Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept                  -1.38      1.03    -3.45     0.63 1.00     4631     5615
+adult                       1.52      0.74     0.20     3.09 1.00     3113     3969
+treatmentCPFA              -0.07      1.16    -2.35     2.16 1.00     4515     5421
+treatmentCAFA               1.75      1.17    -0.55     4.03 1.00     4026     5778
+LUI                        -0.29      0.97    -2.22     1.59 1.00     4722     5457
+adult:treatmentCPFA         0.44      0.90    -1.29     2.27 1.00     3914     5140
+adult:treatmentCAFA        -0.33      0.84    -1.92     1.38 1.00     3622     5063
+adult:LUI                  -0.55      0.62    -1.78     0.64 1.00     3075     4135
+treatmentCPFA:LUI          -0.35      1.36    -3.03     2.29 1.00     4966     5721
+treatmentCAFA:LUI           0.86      1.15    -1.38     3.14 1.00     4169     5432
+adult:treatmentCPFA:LUI    -0.19      1.05    -2.27     1.87 1.00     4695     5528
+adult:treatmentCAFA:LUI     0.07      0.75    -1.38     1.53 1.00     3458     5271
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+
+-----------------------------------
+Description of the summary output.
+-----------------------------------
+
+The column "Estimate" shows the estimated coefficient for each predictor variable, which represents the expected change in the log-odds of the response variable for a one-unit increase in the predictor variable, holding all other predictor variables constant. 
+
+The intercept has an estimated value of -1.38, which indicates the expected value of the response variable when all predictor variables are at their reference levels (i.e., adult = 0, treatment = reference level, LUI = 0).
+
+Next line, adult, a one-unit increase in "adult" is expected to result in a 1.52 increase in the log-odds of the response variable (seedling), holding all other variables constant.
+
+treatmentCPFA, a one-unit increase in "treatmentCPFA" is expected to result in a decline of seedlings to -0.07  in the log-odds of the response variable (seedling), holding all other variables constant.
+
+treatmentCAFA, a one-unit increase in "treatmentCAFA" is expected to increase number of seedlings to 1.75, however, since the credible interval contains zero, the effect may not be statistically significant, and it's possible that the interaction term does not have a meaningful impact on the intercept.
+
+LUI, a one-unit increase in "LUI" is expected to reduce number of seedlings to -0.29)
+
+The term "adult:treatmentCPFA" represents the interaction between the "adult" and "treatmentCPFA" predictors. The estimate for this term is 0.44, which means that the effect of "adult" on the response (dependent) seedling variable depends on the value of "treatmentCPFA", and vice versa.
+
+More specifically, for each one-unit increase in "adult" when "treatmentCPFA" is held constant, the expected change in the response variable is an increase of 0.44 units. Similarly, for each one-unit increase in "treatmentCPFA" when "adult" is held constant, the expected change in the response variable is an increase of 0.44 units.
+
+The last row of the summary output means:
+
+The population-level coefficient estimate for the interaction term "adult:treatmentCAFA:LUI" is 0.07, with a 95% credible interval of -1.38 to 1.53. This means that, in the presence of the other variables in the model, for each one-unit increase in the interaction between adult, treatmentCAFA, and LUI, the intercept (i.e., the expected outcome when all other predictors are zero) is expected to change by 0.07 on average. However, since the credible interval contains zero, the effect may not be statistically significant, and it's possible that the interaction term does not have a meaningful impact on the intercept.

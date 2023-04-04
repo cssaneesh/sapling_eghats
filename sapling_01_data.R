@@ -73,17 +73,20 @@ visit.02 <- read_csv("Sapling_visit_02.csv",
 
 visit_02 <- read_csv("visit.02.csv", col_types = cols(tag.no = col_number()))
 
-
-visit.02 <- visit.02 %>% rename(
-  site.code = `data-revisit-plants_info-site_code_tagged`,
-  dead.alive = `data-revisit-plants_info-deadalive`,
-  height = `data-revisit-plants_info-height`,
-  rcd = `data-revisit-plants_info-rcd`,
-  flame.height = `data-revisit-plants_info-flame_h`,
-  type.resprout = `data-revisit-plants_info-spot`,
-  disturbance = `data-revisit-plants_info-disturbance`
-) %>%
-  select(site.code,
+names(visit_02)
+visit.02 <- visit_02 %>% 
+#   rename(
+#   site.code = `data-revisit-plants_info-site_code_tagged`,
+#   dead.alive = `data-revisit-plants_info-deadalive`,
+#   height = `data-revisit-plants_info-height`,
+#   rcd = `data-revisit-plants_info-rcd`,
+#   flame.height = `data-revisit-plants_info-flame_h`,
+#   type.resprout = `data-revisit-plants_info-spot`,
+#   disturbance = `data-revisit-plants_info-disturbance`
+# ) %>%
+  select(site,
+         village,
+         treatment,
          tag.no,
          sci.name,
          dead.alive,
@@ -94,15 +97,15 @@ visit.02 <- visit.02 %>% rename(
          type.resprout) %>%
   mutate(type.resprout = as.factor(type.resprout)) %>%
   mutate(tag.no=as.numeric(tag.no)) %>% 
-  separate(site.code, c('village', 'treatment'), sep = '([-])') %>%
-  mutate(
-    treatment = recode(
-      treatment,
-      'bodha_grass_removed_no_fire' = "CAFA",
-      'all_burnt' = 'Control',
-      'bodha_grass_present_no_fire' = "CPFA"
-    )
-  ) %>% unite('site', village, treatment, remove = FALSE) %>%
+  # separate(site.code, c('village', 'treatment'), sep = '([-])') %>%
+  # mutate(
+  #   treatment = recode(
+  #     treatment,
+  #     'bodha_grass_removed_no_fire' = "CAFA",
+  #     'all_burnt' = 'Control',
+  #     'bodha_grass_present_no_fire' = "CPFA"
+  #   )
+  # ) %>% unite('site', village, treatment, remove = FALSE) %>%
   mutate(
     dead.alive = as.factor(dead.alive),
     treatment = as.factor(treatment),
@@ -123,6 +126,27 @@ visit_02.lui <- left_join(visit.02, site.lui, "site")
 head(visit_01.lui)
 tail(visit_01.lui)
 str(visit_02.lui)
+
+# adult trees----
+adult_raw <- read_csv("adult.dat.csv") 
+
+names(adult_raw)
+adult.dat <- adult_raw %>% 
+  select(-seedling, -adu.stat) %>% 
+  filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
+  mutate(treatment= factor(treatment)) %>% 
+  mutate(treatment= fct_relevel(treatment, c('Control', 'CPFA', 'CAFA'))) %>%
+  arrange(treatment) %>% 
+  group_by(site, treatment, sci.name, village) %>%
+  summarise(abundance= sum(adult),.groups = 'drop') %>% # abundance of adult trees
+  group_by(site, treatment, village) %>%
+  summarise (Sp.adu = n_distinct(sci.name),
+             # number of unique species/richness
+             Nu.adu = sum(abundance),
+             # total number of adult trees
+             .groups = "drop")
+
+
 
 # no of sites----
 visit_01.lui %>% group_by(treatment, village) %>%

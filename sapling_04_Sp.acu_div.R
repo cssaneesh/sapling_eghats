@@ -72,7 +72,7 @@ df.line$Method <- factor(df.line$Method,
 # Plot----
 treatment_colors <- c("Control" = "#3b5d4d", "CPFA" = "#c5af99","CAFA" = "#ffd365")
 
-fig_6 <- ggplot(Site.hill.TD ,
+r_cure_sap <- ggplot(Site.hill.TD ,
                 aes(x = nt, y = qD,   color = treatment)) +
   facet_wrap( ~ Order.q) +
   geom_point(aes(),
@@ -93,10 +93,10 @@ fig_6 <- ggplot(Site.hill.TD ,
     panel.background = element_rect(fill = "white")
   )
 
-fig_6
+r_cure_sap
 
 (
-  fig_6 +
+  r_cure_sap +
     theme(plot.caption = element_text(
       size = 8, face = "italic",
       hjust = 0.0
@@ -140,7 +140,7 @@ TD_treat_out.lui <-
     diversity = 'TD',
     q = c(0, 1, 2),
     datatype = 'incidence_raw',
-    size = c(1:50),
+    size = c(1:100),
     nboot = 0
   )
 
@@ -213,5 +213,6 @@ fig_x
     ) +
     theme(legend.background = element_rect(fill = NA))
 )
+
 
 

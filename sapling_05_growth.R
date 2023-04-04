@@ -35,20 +35,63 @@ changet0t1 <- t1t0 %>%
 
 changet0t1 <- t1t0 %>% 
   mutate(rgr= log(rcd1)-log(rcd0))
-  
+
+
+
 ggplot(changet0t1, aes(x= treatment, y= rgr))+
   geom_boxplot()+
-  ylim(0,50)+
   facet_wrap(~disturbance)
 
 ggplot(changet0t1, aes(x= treatment, y= rgr))+
   geom_boxplot()+
-  ylim(0,50)+
+  ylim(0,15)+
+  facet_wrap(~disturbance)
+
+ggplot(changet0t1, aes(x= treatment, y= rgr))+
+  geom_boxplot()+
+  ylim(0,15)+
   facet_wrap(~type.resprout)
 
-ggplot(changet0t1, aes(x= treatment, y= rgr, col=sci.name))+
-  geom_boxplot()
 
+ggplot(changet0t1, aes(y= rgr))+
+  geom_boxplot(aes(col=sci.name))+
+  facet_wrap(~treatment)
+
+ggplot(changet0t1, aes(y= rgr))+
+  geom_boxplot(aes(fill=type.resprout))+
+  facet_wrap(~treatment)
+
+ggplot(changet0t1, aes(y= rgr))+
+  geom_boxplot(aes(fill=disturbance))+
+  facet_wrap(~treatment)
+
+names(changet0t1)
+
+hist(changet0t1$rgr)
+
+rgr.mod <- brm(rgr ~ treatment + LUI,
+               data =  changet0t1)
+
+
+rgr.mod
+
+
+conditional_effects(rgr.mod)
+
+# with species as random effects
+rgr.mod.sp <- brm(rgr ~ treatment + LUI + (1|sci.name),
+               data =  changet0t1)
+
+rgr.mod.sp
+
+conditional_effects(rgr.mod.sp)
+
+rgr.mod.dist <- brm(rgr ~ treatment + disturbance,
+                  data =  changet0t1)
+
+summary(rgr.mod.dist)
+
+conditional_effects(rgr.mod.dist)
 
 
 
