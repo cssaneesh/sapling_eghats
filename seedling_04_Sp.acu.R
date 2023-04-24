@@ -53,12 +53,16 @@ TD_treat_out$DataInfo
 # SC = Sample coverage
 
 TD_treat_out$AsyEst # to see the asymptotic diversity estimates
+
+# table of diversity estimates
 TD_treat_out$AsyEst %>% filter(Diversity== 'Simpson diversity') %>%  # q=2 (Simpson diversity) 
 select(-s.e., - LCL, -UCL) %>% 
   rename (Treatment = Assemblage) %>% 
   mutate(Treatment= fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) %>% 
   arrange(Treatment) %>% 
   gt()
+
+
 # Make df for ploting----
 Site.TD.df <- TD_treat_out %>%
   purrr::pluck("iNextEst", "size_based")

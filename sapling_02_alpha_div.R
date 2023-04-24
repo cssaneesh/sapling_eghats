@@ -81,6 +81,20 @@ load('N.alpha.sap.Rdata')
 
 pp_check(N.alpha.sap)
 plot(N.alpha.sap)
+
+# model convergence
+mcmc_plot(N.alpha.sap,
+          type = 'trace')
+
+mcmc_plot(N.alpha.sap,
+          type = 'acf_bar')
+
+mcmc_plot(N.alpha.sap,
+          type = 'areas', 
+          prob= 0.95)+
+  geom_vline(xintercept = 0, col= 'grey')
+
+
 plot.residuals <- cbind(alpha_sum.sap, residuals(N.alpha.sap))
 plot.residuals <- as.data.frame(plot.residuals)
 # plot residuals, treatment
@@ -185,16 +199,16 @@ ggplot() +
 # number of species vs treatment and LUI
 # poisson error for species richness
 
-S.alpha.rich.sap <-
-  brm(
-    S ~ treatment + LUI + Sp.adu + (1 | village),
-    family = poisson(),
-    data = alpha_sum.sap,
-    cores = 4,
-    chains = 4,
-    control = list(adapt_delta = 0.9)
-  )
-save(S.alpha.rich.sap, file= 'S.alpha.rich.sap.Rdata')
+# S.alpha.rich.sap <-
+#   brm(
+#     S ~ treatment + LUI + Sp.adu + (1 | village),
+#     family = poisson(),
+#     data = alpha_sum.sap,
+#     cores = 4,
+#     chains = 4,
+#     control = list(adapt_delta = 0.9)
+#   )
+# save(S.alpha.rich.sap, file= 'S.alpha.rich.sap.Rdata')
 
 load('S.alpha.rich.sap.Rdata')
 
@@ -282,7 +296,7 @@ ggplot() +
         y = estimate__),
     linewidth = 1, method = 'lm')
 
-# S ~ number of adult tree species
+# S ~ richness of adult tree species
 ggplot() +
   geom_point(
     data = alpha_sum.sap,
@@ -400,7 +414,7 @@ ggplot() +
         y = estimate__),
     linewidth = 1, method = 'lm')
 
-# Sn ~ number of adult tree species
+# Sn ~ adult tree species
 ggplot() +
   geom_point(
     data = alpha_sum.sap,
