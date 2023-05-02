@@ -1,3 +1,8 @@
+
+library(ggplot2)
+library(tidyverse)
+library(brms)
+
 source('seedling_01_data.R')
 
 # alpha diversity seedling----
@@ -124,7 +129,9 @@ conditional_effects(N.alpha_sd)
 N.alpha_sd_ce_t <- conditional_effects(N.alpha_sd, effects = 'treatment')
 N.alpha_sd_ce_lui <- conditional_effects(N.alpha_sd, effects = 'LUI:treatment')
 
-# N.alpha_sd_ce_Nu.adul <- conditional_effects(N.alpha_sd, effects = 'Nu.adu') 
+ N.alpha_sd_ce_Nu.adul <- conditional_effects(N.alpha_sd, effects = 'Nu.adu:treatment') 
+
+ head(N.alpha_sd_ce_Nu.adul)
 # Emma, predict fuction
 
 # N ~ treatment
@@ -176,7 +183,7 @@ ggplot() +
     data = N.alpha_sd_ce_lui$LUI,
     # conditional effect
     aes(x = LUI, # ce of the predicting variable
-        y = estimate__),
+        y = estimate__, group= effect2__, color =effect2__),
     linewidth = 1, method = 'lm')
 
 # N ~ number of adult trees
@@ -195,7 +202,7 @@ ggplot() +
     data = N.alpha_sd_ce_Nu.adul$Nu.adu,
     # conditional effect
     aes(x = Nu.adu, # ce of the predicting variable
-        y = estimate__),
+        y = estimate__,  group= effect2__, color =effect2__),
     linewidth = 1, method = 'lm' )
 
 
