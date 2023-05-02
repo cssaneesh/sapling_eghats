@@ -6,7 +6,35 @@ seedling.dat %>%
   group_by(treatment) %>% 
   summarise(N_sites=n_distinct(site)) # We have more samples in CAFA
 
-# Solution, bootstrap sampling
+
+# categorize LUI into three groups
+
+seedling.dat <-
+  seedling.dat %>%
+  mutate(lui_cat = as.numeric(cut_number(LUI, 3))) %>%
+  mutate(lui_cat = as.factor(lui_cat)) %>%
+  mutate(lui_cat = recode(
+    lui_cat,
+    `1` = 'low',
+    `2` = 'medium',
+    `3` = 'high'
+  ))
+
+seedling.dat %>% 
+  filter(seedling >0) %>% 
+  group_by(treatment) %>% 
+  count (lui_cat, name = 'no.sites')
+
+seedling.dat %>% 
+  filter(seedling >0) %>% 
+  group_by(treatment) %>% 
+  count (lui_cat, name = 'no.sites') %>% 
+  ggplot()+
+  geom_bar(aes(x= lui_cat, y= `no.sites`, fill= treatment), stat = 'identity', position = 'dodge')
+
+
+
+# Bootstrap sampling
 
 gamma_data <- seedling.dat %>% # alpha_summary_sd, sd= seedling
   filter(site!= 'APA19_CPFA') %>% # to avoid zero N and inf ENSPIE
