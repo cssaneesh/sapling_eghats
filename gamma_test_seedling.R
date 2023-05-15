@@ -149,7 +149,8 @@ for (i in 1:n_samps) {
                 summarise(totalN = sum(N),
                           S = n_distinct(sci.name),
                           ENSPIE = vegan::diversity(N, index = 'invsimpson'),
-                          S_PIE = mobr::calc_PIE(N, ENS = T), .groups = 'drop') %>% 
+                          S_PIE = mobr::calc_PIE(N, ENS = T)#, .groups = 'drop'
+                          ) %>% 
               # add counter for sample based rarefaction
               mutate(gamma_Sn = gamma_Sn_sub_samp$Sn,
                      gamma_Sn_alphaN = gamma_Sn_sub_samp$Sn_alpha,
