@@ -22,6 +22,7 @@ site.lui <- lui %>% select(site, LUI)
 seedling.dat <- seedling_raw %>% 
   left_join(site.lui, by = 'site') %>% 
   filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
+  # filter(sci.name!= 'Pongamia pinnata') %>% # planted tree
   mutate(treatment= factor(treatment)) %>% 
   mutate(treatment= fct_relevel(treatment, c('Control', 'CPFA', 'CAFA'))) %>% 
   mutate(adu.stat= factor(adu.stat)) %>% 

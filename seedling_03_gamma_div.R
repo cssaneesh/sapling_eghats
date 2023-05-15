@@ -3,7 +3,7 @@ source('seedling_01_data.R')
 # Comparing number of sites in treatments
 seedling.dat %>% 
   filter(seedling >0) %>% 
-  group_by(treatment) %>% 
+  group_by(Treatment) %>% 
   summarise(N_sites=n_distinct(site)) # We have more samples in CAFA
 
 
@@ -22,15 +22,15 @@ seedling.dat <-
 
 seedling.dat %>% 
   filter(seedling >0) %>% 
-  group_by(treatment) %>% 
+  group_by(Treatment) %>% 
   count (lui_cat, name = 'no.sites')
 
 seedling.dat %>% 
   filter(seedling >0) %>% 
-  group_by(treatment) %>% 
+  group_by(Treatment) %>% 
   count (lui_cat, name = 'no.sites') %>% 
   ggplot()+
-  geom_bar(aes(x= lui_cat, y= `no.sites`, fill= treatment), stat = 'identity', position = 'dodge')
+  geom_bar(aes(x= lui_cat, y= `no.sites`, fill= Treatment), stat = 'identity', position = 'dodge')
 
 
 
