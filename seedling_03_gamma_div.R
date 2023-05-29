@@ -11,6 +11,7 @@ seedling.dat %>%
 
 seedling.dat <-
   seedling.dat %>%
+  filter(seedling >0) %>%
   mutate(lui_cat = as.numeric(cut_number(LUI, 3))) %>%
   mutate(lui_cat = as.factor(lui_cat)) %>%
   mutate(lui_cat = recode(
@@ -32,36 +33,36 @@ seedling.dat %>%
   ggplot()+
   geom_bar(aes(x= lui_cat, y= `no.sites`, fill= Treatment), stat = 'identity', position = 'dodge')
 
-
-
 # Bootstrap sampling
 
 gamma_data <- seedling.dat %>% # alpha_summary_sd, sd= seedling
-  filter(site!= 'APA19_CPFA') %>% # to avoid zero N and inf ENSPIE
+  filter(lui_cat!= 'high') %>% 
   filter(seedling>0) %>% 
-  filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
   group_by(site) %>% 
   summarise(tot.adult= sum(adult)) %>% # add the total number of adults in each site
   left_join(seedling.dat %>% select(!adult), multiple = "all") %>% 
-  group_by(site, treatment, sci.name, LUI, tot.adult, village) %>%
-  summarise(abundance= sum(seedling)) %>% # abundance of seedling
-  ungroup() %>%
-  filter(abundance>0) %>% 
+  group_by(site, Treatment, sci.name, lui_cat, village) %>%
+  summarise(sp.abundance= sum(seedling), .groups = 'drop') %>% # abundance of seedling
+  filter(sp.abundance>0) %>% 
   # calculate metrics for each site
-  group_by(site, treatment, LUI, sci.name, tot.adult, abundance) %>%
-  summarise (N = sum(abundance)) %>% 
-  # total number of saplings
-  ungroup() %>% 
-  group_by(treatment, site) %>% 
+  group_by(site, Treatment, lui_cat, sci.name) %>%
+  summarise (N = sum(sp.abundance), .groups = 'drop') %>% 
+  # total number of seedling
+  group_by(Treatment, site, lui_cat) %>% 
   nest(data=c(sci.name, N)) %>% 
   ungroup() %>% 
-  mutate(Treatment = factor(treatment)) %>% # to order treatments in the plot
-  mutate(Treatment = fct_relevel(treatment, c("Control", "CPFA", "CAFA"))) %>%
+  mutate(Treatment = factor(Treatment)) %>% # to order treatments in the plot
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) %>%
   arrange(Treatment)
 
-# for n_samples, get 10 sites (alpha data) from CAFA
+# for n_samples, get 6 sites (alpha data) from lui categor
+names(gamma_data)
 
-n_sites = 11
+gamma_data %>%
+  group_by(Treatment) %>% 
+  count (lui_cat, name = 'no.sites')
+  
+n_sites = 2
 n_samps =200
 
 gamma_metrics <- tibble()
@@ -71,59 +72,70 @@ for (i in 1:n_samps) {
   # get these n_Site rows and calculate alpha S
   alpha_sub_samp <- gamma_data %>%
     # from each group
-    group_by(treatment) %>%
+    group_by(Treatment, lui_cat) %>%
     # get 10 rows
     sample_n(n_sites, replace = F) %>%
     # unnest
-    unnest() %>%
+    unnest(cols = c(data)) %>%
     # calculate PIE, S for each Site
-    group_by(treatment, site) %>%
+    group_by(Treatment, site, lui_cat) %>%
     mutate(
       alphaS = n_distinct(sci.name),
+      alphaN = sum(N),
       alpha_Spie = vegan::diversity(N, index = 'invsimpson')
     ) %>%
     ungroup() %>%
     # get the minimum N and mean S for each treatment
-    group_by(treatment) %>%
-    mutate(mean_alpha_S = mean(alphaS),
-           mean_alpha_Spie = mean(alpha_Spie)) %>%
+    group_by(Treatment, lui_cat) %>%
+    mutate(
+      min_alpha_N = min(alphaN),
+      mean_alpha_S = mean(alphaS),
+      mean_alpha_Spie = mean(alpha_Spie)
+    ) %>%
     ungroup()
-  # aggregate same sub sample for gamma calculations
+  
+  # need alpha Sn for beta-Sn (see Chase et al. 2018 Ecol Lett for beta-Sn introduction, nothing is going on
+  # so we chose not to present it here)
+  alpha_Sn_sub_samp <- alpha_sub_samp %>% 
+    group_by(Treatment, site, lui_cat) %>% 
+    nest(data=c(N, min_alpha_N)) %>% 
+    mutate(Sn = purrr::map(data, ~mobr::rarefaction(.x$N, method = 'IBR',
+                                                    effort = unique(.x$min_alpha_N)))) %>% 
+    ungroup() %>% 
+    unnest(Sn) %>% 
+    group_by(Treatment, lui_cat) %>% 
+    mutate(mean_alpha_Sn = mean(Sn))
+  
+    # aggregate same sub sample for gamma calculations
   sub_samp <- alpha_sub_samp %>%
     # aggregate data to gamma scale
-    group_by(treatment, sci.name) %>%
-    summarise(sp.treat.count = sum(N)) %>%
+    group_by(Treatment, sci.name, lui_cat) %>%
+    summarise(N = sum(N), .groups = 'drop') %>% 
+     # get minimum N for Sn
+    group_by(Treatment, lui_cat) %>% 
+    mutate(totalN= sum(N)) %>% 
     ungroup() %>% 
-    # get minimum N for Sn
-    group_by(treatment) %>%
-    mutate(
-      trt_count = sum(sp.treat.count),
-      gamma_rel_count = (sp.treat.count / trt_count)
-    ) %>%
-    ungroup() %>%
-    mutate(minrel = min(gamma_rel_count))
+    mutate(minN = min(totalN))
+    
+  # calculate Sn(s)
+  
+
   # calculate the metrics we want
-  gamma_metrics <- gamma_metrics %>%
-    bind_rows(
-      sub_samp %>%
-        group_by(treatment) %>%
-        summarise(
-          S = n_distinct(sci.name),
-          ENSPIE = vegan::diversity(gamma_rel_count, index = 'invsimpson')
-        )  %>%
-        # add counter for sample based rarefaction
-        left_join(
-          alpha_sub_samp %>%
-            select(treatment, mean_alpha_S, mean_alpha_Spie) %>%
-            distinct() %>%
-            group_by(treatment) %>%
-            mutate(
-              alpha_S = mean_alpha_S,
-              alpha_Spie = mean_alpha_Spie,
-              resample = i
-            )
-        )
-    )
+  gamma_metrics <- gamma_metrics %>% 
+    bind_rows(sub_samp %>% 
+                group_by(Treatment, lui_cat) %>% 
+                summarise(totalN = sum(N),
+                          S = n_distinct(sci.name),
+                          ENSPIE = vegan::diversity(N, index = 'invsimpson'),
+                          S_PIE = mobr::calc_PIE(N, ENS = T)) #%>% 
+                # # add counter for sample based rarefaction
+                # mutate(gamma_Sn = gamma_Sn_sub_samp$Sn,
+                #        gamma_Sn_alphaN = gamma_Sn_sub_samp$Sn_alpha,
+                #        alpha_S = unique(alpha_sub_samp$mean_alpha_S),
+                #        alpha_Spie = unique(alpha_sub_samp$mean_alpha_Spie),
+                #        alpha_Sn = unique(alpha_Sn_sub_samp$mean_alpha_Sn),
+                #        resample = i)
+                )
 }
 
 save(gamma_metrics, file= 'gamma_metrics.Rdata')

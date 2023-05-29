@@ -14,9 +14,9 @@ lui_cat <-
   seedling.dat %>%
   filter(seedling > 0) %>%
   mutate(lui_cat = case_when(
-    LUI > 0 & LUI <= 0.55 ~ 'low',
-    LUI > 0.55 & LUI <= 1.10 ~ 'medium',
-    LUI > 1.10 ~ 'high'
+    LUI > 0 & LUI <= 0.60 ~ 'low',
+    LUI > 0.60 & LUI <= 1.20 ~ 'medium',
+    LUI > 1.20 ~ 'high'
   ))
 
 lui_cat %>% 
@@ -34,27 +34,34 @@ lui_cat %>%
 # Bootstrap sampling
 
 gamma_data_prep <- lui_cat %>% # alpha_summary_sd, sd= seedling
-  filter(lui_cat!= 'high') %>% 
+  filter(lui_cat!= 'high') %>%
   group_by(site) %>% 
   summarise(tot.adult= sum(adult)) %>% # add the total number of adults in each site
   left_join(lui_cat %>% select(!adult), multiple = "all") %>% 
   group_by(site, Treatment, sci.name, lui_cat, village) %>%
-  summarise(sp.abundance= sum(seedling), .groups = 'drop') # abundance of seedling
+  summarise(sp.abundance= sum(seedling), .groups = 'drop') %>% # abundance of seedling
+  arrange(Treatment, lui_cat)
   
 # count sites
 
-gamma_data_prep %>%
+gamma_data_prep%>%
+  select(site, Treatment, lui_cat) %>% 
+  distinct(site, Treatment, lui_cat) %>% 
   group_by(Treatment) %>% 
   count (lui_cat, name = 'no.sites')
 
 gamma_data <- gamma_data_prep %>%   
   # calculate metrics for each site
-  group_by(site, Treatment, lui_cat, sci.name) %>%
+  group_by(Treatment, lui_cat, site, sci.name) %>%
   summarise (N = sum(sp.abundance), .groups = 'drop') %>% 
   # total number of seedling species
   group_by(Treatment, site, lui_cat) %>% 
   nest(data=c(sci.name, N)) %>% 
-  ungroup()
+  ungroup() %>% 
+  arrange(Treatment, lui_cat)
+
+
+gamma_data$data
 
 
 gamma_data %>%
@@ -87,7 +94,8 @@ for (i in 1:n_samps) {
     ) %>%
     ungroup() %>%
     # get the minimum N and mean S for each treatment
-    group_by(Treatment, lui_cat) %>%
+    group_by(Treatment, # lui_cat
+             ) %>%
     mutate(
       min_alpha_N = min(alphaN),
       mean_alpha_S = mean(alphaS),
@@ -97,16 +105,16 @@ for (i in 1:n_samps) {
   
   # need alpha Sn for beta-Sn (see Chase et al. 2018 Ecol Lett for beta-Sn introduction, nothing is going on
   # so we chose not to present it here)
-  alpha_Sn_sub_samp <- alpha_sub_samp %>% 
-    group_by(Treatment, site, lui_cat) %>% 
-    nest(data=c(N, min_alpha_N)) %>% 
+  alpha_Sn_sub_samp <- alpha_sub_samp %>%
+    group_by(Treatment, site, lui_cat) %>%
+    nest(data=c(N, min_alpha_N)) %>%
     mutate(Sn = purrr::map(data, ~mobr::rarefaction(.x$N, method = 'IBR',
-                                                    effort = unique(.x$min_alpha_N)))) %>% 
-    ungroup() %>% 
-    unnest(Sn) %>% 
-    group_by(Treatment, lui_cat) %>% 
+                                                    effort = unique(.x$min_alpha_N)))) %>%
+    ungroup() %>%
+    unnest(Sn) %>%
+    group_by(Treatment, lui_cat) %>%
     mutate(mean_alpha_Sn = mean(Sn))
-  
+
   # aggregate same sub sample for gamma calculations
   sub_samp <- alpha_sub_samp %>%
     # aggregate data to gamma scale

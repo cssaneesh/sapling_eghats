@@ -1,4 +1,3 @@
-
 source('seedling_01_data.R')
 
 # alpha diversity seedling----
@@ -201,7 +200,7 @@ ggplot() +
       group = effect2__,
       fill = effect2__
     ), alpha= 0.5
-  )+
+  ) +
 labs(y= 'Number of seedlings', x= 'Land use intensity index',
      subtitle = 'N ~ Treatment * LUI + Nu.adu + (1|village)')+
   coord_cartesian(ylim = c(0,325))+
@@ -222,7 +221,7 @@ ggplot() +
     size = 1.5,
     alpha = 0.5,
     position = position_jitter(width = 0.05, height = 0.45)
-  )+
+  ) +
   geom_line(
     data = N.alpha_sd_ce_Nu.adul$Nu.adu,
     # conditional effect
@@ -236,7 +235,7 @@ ggplot() +
         ymin= lower__,
         ymax= upper__,
         y = estimate__,  group= effect2__, fill =effect2__), alpha= 0.5
-    )+
+    ) +
   labs(y= 'Number of seedlings', x= 'Number of adult trees') +
   coord_cartesian(ylim = c(0,200))+
   scale_color_viridis(discrete = T, option="D")  + 
