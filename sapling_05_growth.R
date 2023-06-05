@@ -97,7 +97,6 @@ head(t1t0, 4)
 tail(t1t0, 4)
 
 # data for RCD---- 
- 
 rgr <- t1t0 %>% select(Treatment, 
                        village, 
                        site, 
@@ -187,15 +186,15 @@ sap_status <- rgr %>%
   ) %>% 
   summarise(Percentage= round(n()/ nrow(rgr) * 100, 2),.groups = 'drop'
   ) %>% 
-  mutate(goatdat= if_else(sap.status== 'browsed', 1, 0)) %>% 
-  mutate(trampdat= if_else(sap.status== 'trampled', 1, 0))
+  mutate(Browsing= if_else(sap.status== 'browsed', 1, 0)) %>% 
+  mutate(Trampling= if_else(sap.status== 'trampled', 1, 0))
 
 head(sap_status, 3)
 
-sap_status %>% ggplot(aes(x= goatdat, fill= Treatment))+
+sap_status %>% ggplot(aes(x= Browsing, fill= Treatment))+
   geom_bar(position = 'dodge')
 
-sap_status %>% ggplot(aes(x= trampdat, fill= Treatment))+
+sap_status %>% ggplot(aes(x= Trampling, fill= Treatment))+
   geom_bar(position = 'dodge')
 
 sap_status %>% filter(sap.status== 'browsed') %>% ggplot(aes(x= Treatment, y= Percentage))+
@@ -235,7 +234,6 @@ rgr %>%
 hist(rgr$rgr_rcd)
 
 # which predictor to take as a random effect?
-
 boxplot(rgr_rcd ~ site, data = rgr)
 boxplot(rgr_rcd ~ village, data = rgr)
 
@@ -334,7 +332,6 @@ summary(mod.rgr.treat.goat)
 conditional_effects(mod.rgr.treat.goat)
 conditional_effects(mod.rgr.treat.goat, effects = 'Treatment:Goat')
 conditional_effects(mod.rgr.treat.goat, effects = 'Goat:Treatment')
-
 
 # rcd ~ treatment * trench
 # mod.rgr.treat.trench <-
@@ -471,7 +468,7 @@ names(sap_status)
 head(sap_status, 3)
 
 # treatment and number of goats in a village as predictors of browsing
-# sap_browse <- brm(goatdat ~ Treatment * Goat + (1|village), data= sap_status,
+# sap_browse <- brm(Browsing ~ Treatment * Goat + (1|village), data= sap_status,
 #                   family = bernoulli(link = "logit"),
 #                   chains = 4,
 #                   warmup = 1000,
@@ -503,7 +500,7 @@ conditional_effects(sap_browse)
 
 # trampling
 # treatment and number of goats in a village as predictors of trampling
-# sap_tramp <- brm(trampdat ~ Treatment * Goat + (1|village), data= sap_status,
+# sap_tramp <- brm(Trampling ~ Treatment * Goat + (1|village), data= sap_status,
 #                  family = bernoulli(link = "logit"),
 #                  chains = 4,
 #                  warmup = 1000,
