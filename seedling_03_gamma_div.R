@@ -1,5 +1,28 @@
 source('seedling_01_data.R')
 
+mycol <- custom_theme <- function() {
+  library(ggplot2)
+  
+  theme_set(
+    theme_bw(base_size = 18) +
+      theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(colour = "black", fill = "white"),
+        legend.position = "bottom"
+      )
+  )
+  
+  scale_color_viridis <- function(discrete = TRUE, option = "D") {
+    ggplot2::scale_color_viridis(discrete = discrete, option = option)
+  }
+  
+  scale_fill_viridis <- function(discrete = TRUE, option = "D") {
+    ggplot2::scale_fill_viridis(discrete = discrete, option = option)
+  }
+}
+
+
 # Comparing number of sites in treatments
 seedling.dat %>% 
   filter(seedling >0) %>% 
@@ -11,7 +34,6 @@ seedling.dat %>%
 
 seedling.dat <-
   seedling.dat %>%
-  filter(seedling >0) %>%
   mutate(lui_cat = as.numeric(cut_number(LUI, 3))) %>%
   mutate(lui_cat = as.factor(lui_cat)) %>%
   mutate(lui_cat = recode(
@@ -33,29 +55,13 @@ seedling.dat %>%
   ggplot()+
   geom_bar(aes(x= lui_cat, y= `no.sites`, fill= Treatment), stat = 'identity', position = 'dodge')
 
+
+
 # Bootstrap sampling
 
 gamma_data <- seedling.dat %>% # alpha_summary_sd, sd= seedling
-  filter(lui_cat!= 'high') %>% 
+  filter(site!= 'APA19_CPFA') %>% # to avoid zero N and inf ENSPIE
   filter(seedling>0) %>% 
-<<<<<<< HEAD
-  group_by(site) %>% 
-  summarise(tot.adult= sum(adult)) %>% # add the total number of adults in each site
-  left_join(seedling.dat %>% select(!adult), multiple = "all") %>% 
-  group_by(site, Treatment, sci.name, lui_cat, village) %>%
-  summarise(sp.abundance= sum(seedling), .groups = 'drop') %>% # abundance of seedling
-  filter(sp.abundance>0) %>% 
-  # calculate metrics for each site
-  group_by(site, Treatment, lui_cat, sci.name) %>%
-  summarise (N = sum(sp.abundance), .groups = 'drop') %>% 
-  # total number of seedling
-  group_by(Treatment, site, lui_cat) %>% 
-  nest(data=c(sci.name, N)) %>% 
-  ungroup() %>% 
-  mutate(Treatment = factor(Treatment)) %>% # to order treatments in the plot
-  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) %>%
-  arrange(Treatment)
-=======
   filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
   filter(lui_cat!= 'high') %>% # tEmma added this
   group_by(site) %>% 
@@ -78,22 +84,11 @@ gamma_data <- seedling.dat %>% # alpha_summary_sd, sd= seedling
   arrange(Treatment, lui_cat)
 
 View(gamma_data)
->>>>>>> e30b0a5f03808c319c044b0555e72e24eefd3ac3
 
-# for n_samples, get 6 sites (alpha data) from lui categor
-names(gamma_data)
+# for n_samples, get 3 sites (alpha data) from CAFA
 
-<<<<<<< HEAD
-gamma_data %>%
-  group_by(Treatment) %>% 
-  count (lui_cat, name = 'no.sites')
-  
-n_sites = 2
-n_samps =200
-=======
 n_sites = 3 # Emma changed to 3, which is the minimum number of sites per category
 n_samps = 200
->>>>>>> e30b0a5f03808c319c044b0555e72e24eefd3ac3
 
 gamma_metrics <- tibble()
 
@@ -107,14 +102,9 @@ for (i in 1:n_samps) {
     sample_n(n_sites, replace = F) %>%
     # unnest
     unnest(cols = c(data)) %>%
-<<<<<<< HEAD
-    # calculate PIE, S for each Site
-    group_by(Treatment, site, lui_cat) %>%
-=======
     ungroup() %>%
     # calculate PIE, S for each Site
     group_by(Treatment, lui_cat, site) %>%
->>>>>>> e30b0a5f03808c319c044b0555e72e24eefd3ac3
     mutate(
       alphaS = n_distinct(sci.name),
       alphaN = sum(N),
@@ -123,71 +113,21 @@ for (i in 1:n_samps) {
     ungroup() %>%
     # get the minimum N and mean S for each treatment
     group_by(Treatment, lui_cat) %>%
-<<<<<<< HEAD
-    mutate(
-      min_alpha_N = min(alphaN),
-      mean_alpha_S = mean(alphaS),
-      mean_alpha_Spie = mean(alpha_Spie)
-    ) %>%
-    ungroup()
-  
-  # need alpha Sn for beta-Sn (see Chase et al. 2018 Ecol Lett for beta-Sn introduction, nothing is going on
-  # so we chose not to present it here)
-  alpha_Sn_sub_samp <- alpha_sub_samp %>% 
-    group_by(Treatment, site, lui_cat) %>% 
-    nest(data=c(N, min_alpha_N)) %>% 
-=======
     mutate(min_alpha_N = min(alphaN),
-          mean_alpha_S = mean(alphaS),
+           mean_alpha_S = mean(alphaS),
            mean_alpha_Spie = mean(alpha_Spie)) %>%
     ungroup()
   
   alpha_Sn_sub_samp <- alpha_sub_samp %>% 
     group_by(Treatment, lui_cat, site) %>% 
     nest( data = c(sci.name, N, min_alpha_N) ) %>% 
->>>>>>> e30b0a5f03808c319c044b0555e72e24eefd3ac3
     mutate(Sn = purrr::map(data, ~mobr::rarefaction(.x$N, method = 'IBR',
                                                     effort = unique(.x$min_alpha_N)))) %>% 
     ungroup() %>% 
     unnest(Sn) %>% 
-<<<<<<< HEAD
-    group_by(Treatment, lui_cat) %>% 
-    mutate(mean_alpha_Sn = mean(Sn))
-  
-    # aggregate same sub sample for gamma calculations
-  sub_samp <- alpha_sub_samp %>%
-    # aggregate data to gamma scale
-    group_by(Treatment, sci.name, lui_cat) %>%
-    summarise(N = sum(N), .groups = 'drop') %>% 
-     # get minimum N for Sn
-    group_by(Treatment, lui_cat) %>% 
-    mutate(totalN= sum(N)) %>% 
-    ungroup() %>% 
-    mutate(minN = min(totalN))
-    
-  # calculate Sn(s)
-  
-
-  # calculate the metrics we want
-  gamma_metrics <- gamma_metrics %>% 
-    bind_rows(sub_samp %>% 
-                group_by(Treatment, lui_cat) %>% 
-                summarise(totalN = sum(N),
-                          S = n_distinct(sci.name),
-                          ENSPIE = vegan::diversity(N, index = 'invsimpson'),
-                          S_PIE = mobr::calc_PIE(N, ENS = T)) #%>% 
-                # # add counter for sample based rarefaction
-                # mutate(gamma_Sn = gamma_Sn_sub_samp$Sn,
-                #        gamma_Sn_alphaN = gamma_Sn_sub_samp$Sn_alpha,
-                #        alpha_S = unique(alpha_sub_samp$mean_alpha_S),
-                #        alpha_Spie = unique(alpha_sub_samp$mean_alpha_Spie),
-                #        alpha_Sn = unique(alpha_Sn_sub_samp$mean_alpha_Sn),
-                #        resample = i)
-                )
-=======
     group_by(Treatment, lui_cat ) %>% 
     mutate(mean_alpha_Sn = mean(Sn))
-           
+  
   # aggregate same sub sample for gamma calculations
   sub_samp <- alpha_sub_samp %>%
     # aggregate data to gamma scale
@@ -225,34 +165,32 @@ for (i in 1:n_samps) {
       sub_samp %>%
         group_by(Treatment, lui_cat) %>%
         summarise( totalN = sum(N),
-          S = n_distinct(sci.name),
-          ENSPIE = vegan::diversity(N, index = 'invsimpson')
+                   S = n_distinct(sci.name),
+                   ENSPIE = vegan::diversity(N, index = 'invsimpson')
         )  %>%
         left_join( alpha_sub_samp %>%
-                      select(Treatment, lui_cat, mean_alpha_S, mean_alpha_Spie) %>%
-                      distinct() %>% mutate(alpha_S = mean_alpha_S, 
-                                            alpha_Spie = mean_alpha_Spie) %>%
-
-                    left_join( gamma_Sn_sub_samp %>%
-                      select(Treatment, lui_cat, Sn, Sn_alpha) %>%
-                      distinct() %>% mutate(gamma_Sn = Sn,
-                        gamma_Sn_alphaN = Sn_alpha) %>%
-
-                    left_join( alpha_Sn_sub_samp  %>%
-                      select(Treatment, lui_cat,  mean_alpha_Sn) %>%
-                      distinct() %>% mutate( alpha_Sn = mean_alpha_Sn) %>%
-                      
-        # add counter for sample based rarefaction
-        mutate(resample = i))
-    ) ) )
->>>>>>> e30b0a5f03808c319c044b0555e72e24eefd3ac3
+                     select(Treatment, lui_cat, mean_alpha_S, mean_alpha_Spie) %>%
+                     distinct() %>% mutate(alpha_S = mean_alpha_S, 
+                                           alpha_Spie = mean_alpha_Spie) %>%
+                     
+                     left_join( gamma_Sn_sub_samp %>%
+                                  select(Treatment, lui_cat, Sn, Sn_alpha) %>%
+                                  distinct() %>% mutate(gamma_Sn = Sn,
+                                                        gamma_Sn_alphaN = Sn_alpha) %>%
+                                  
+                                  left_join( alpha_Sn_sub_samp  %>%
+                                               select(Treatment, lui_cat,  mean_alpha_Sn) %>%
+                                               distinct() %>% mutate( alpha_Sn = mean_alpha_Sn) %>%
+                                               
+                                               # add counter for sample based rarefaction
+                                               mutate(resample = i))
+                     ) ) )
 }
-
-View(gamma_metrics)
 
 save(gamma_metrics, file= 'gamma_metrics.Rdata')
 
 load('gamma_metrics.Rdata')
+View(gamma_metrics)
 
 # summarise the resamples
 gamma_boot_results <- gamma_metrics %>% 
@@ -289,100 +227,149 @@ gamma_boot_results <- gamma_metrics %>%
 
 head(gamma_boot_results)
 
+mycol() # my viridis function
+
 # plot results
 gamma_S_all <- ggplot() +
-  geom_point(data = gamma_boot_results,
-             aes(x = Treatment, group = lui_cat, y = S_median, colour = Treatment,
-                 shape= lui_cat),
-             position = position_dodge(width = 0.5),
-             size = 4) +
-  geom_errorbar(data = gamma_boot_results,
-                aes(x = Treatment, group = lui_cat, ymin = S_Q5, ymax = S_Q95,
-                    colour = Treatment),
-                position = position_dodge(width = 0.5),
-                linewidth = 1.3,
-                width = 0.1) +
-  scale_colour_grey() +
+  geom_point(
+    data = gamma_boot_results,
+    aes(
+      x = Treatment,
+      group = lui_cat,
+      y = S_median,
+      colour = Treatment,
+      shape = lui_cat
+    ),
+    position = position_dodge(width = 0.5),
+    size = 4
+  ) +
+  geom_errorbar(
+    data = gamma_boot_results,
+    aes(
+      x = Treatment,
+      group = lui_cat,
+      ymin = S_Q5,
+      ymax = S_Q95,
+      colour = Treatment
+    ),
+    position = position_dodge(width = 0.5),
+    linewidth = 1.3,
+    width = 0.1
+  ) +
   labs(x = '',
-       y = 'Species richness (S)'#,
-       # tag = '(b)'
+       y = 'Species richness (S)'
   ) +
   theme_bw() +
   theme(legend.position = 'bottom', 
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8))
+        plot.tag.position = c(0.3, 0.8))+
+  scale_color_viridis(discrete = T, option = 'D')
 
 gamma_S_all
 
 # Saneesh needs to edit from here
 
 gamma_S_PIE_all <- ggplot() +
-  geom_point(data = gamma_boot_results,
-             aes(x = Treatment, y = ENSPIE_median, colour = Treatment),
-             size = 4) +
-  geom_errorbar(data = gamma_boot_results,
-                aes(x = Treatment, ymin = ENSPIE_Q5, ymax = ENSPIE_Q95, 
-                    colour = Treatment),
-                size = 1.3,
-                width = 0.1) +
-  scale_colour_grey() +
+  geom_point(
+    data = gamma_boot_results,
+    aes(
+      x = Treatment,
+      y = ENSPIE_median,
+      group = lui_cat,
+      colour = Treatment,
+      shape = lui_cat
+    ),
+    position = position_dodge(width = 0.5),
+    size = 4
+  ) +
+  geom_errorbar(
+    data = gamma_boot_results,
+    aes(
+      x = Treatment,
+      ymin = ENSPIE_Q5,
+      ymax = ENSPIE_Q95,
+      group = lui_cat,
+      colour = Treatment
+    ),
+    position = position_dodge(width = 0.5),
+    linewidth = 1.3,
+    width = 0.1
+  ) +
   labs(x = '',
-       y = expression(paste(S[PIE]))#,
-       # subtitle = 'All fish combined',
-       # tag = '(a)'
+       y = expression(paste(S[PIE]))
   ) +
   theme_bw() +
   theme(legend.position = 'bottom', 
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8))
+        plot.tag.position = c(0.3, 0.8))+
+  scale_color_viridis(discrete = T, option = 'D')
 
+gamma_S_PIE_all
 
 beta_S_all <- ggplot() +
   geom_point(data = gamma_boot_results,
-             aes(x = Treatment, y = beta_S_median, colour = Treatment),
+             aes(x = Treatment, 
+                 y = beta_S_median,
+                 group = lui_cat,
+                 colour = Treatment,
+                 shape = lui_cat),
+             position = position_dodge(width = 0.5),
              size = 4) +
   geom_errorbar(data = gamma_boot_results,
-                aes(x = Treatment, ymin = beta_S_Q5, ymax = beta_S_Q95, 
-                    colour = Treatment),
-                size = 1.3,
+                aes(x = Treatment, 
+                    ymin = beta_S_Q5, 
+                    ymax = beta_S_Q95,
+                    group = lui_cat,
+                    colour = Treatment
+                ),
+                position = position_dodge(width = 0.5),
+                linewidth = 1.3,
                 width = 0.1) +
-  scale_colour_grey() +
   labs(x = '',
-       y = expression(paste(italic(beta),'-S'))#,
-       # tag = '(b)'
+       y = expression(paste(italic(beta),'-S'))
   ) +
   theme_bw() +
   theme(legend.position = 'none', 
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8))
+        plot.tag.position = c(0.3, 0.8))+
+  scale_color_viridis(discrete = T, option = 'D')
+
+beta_S_all
 
 beta_S_PIE_all <- ggplot() +
   geom_point(data = gamma_boot_results,
-             aes(x = Treatment, y = beta_S_PIE_median, colour = Treatment),
+             aes(x = Treatment, 
+                 y = beta_S_PIE_median,
+                 group= lui_cat,
+                 colour = Treatment,
+                 shape= lui_cat),
+             position = position_dodge(width = 0.5),
              size = 4) +
   geom_errorbar(data = gamma_boot_results,
-                aes(x = Treatment, ymin = beta_S_PIE_Q5, ymax = beta_S_PIE_Q95, 
-                    colour = Treatment),
-                size = 1.3,
+                aes(x = Treatment, 
+                    ymin = beta_S_PIE_Q5, 
+                    ymax = beta_S_PIE_Q95, 
+                    colour = Treatment,
+                    group= lui_cat),
+                position = position_dodge(width = 0.5),
+                linewidth = 1.3,
                 width = 0.1) +
-  scale_colour_grey() +
   labs(x = '',
-       y = expression(paste(italic(beta), '-', S[PIE]))#,
-       # subtitle = 'All fishes combined',
-       # tag = '(a)'
+       y = expression(paste(italic(beta), '-', S[PIE]))
   ) +
   theme_bw() +
   theme(legend.position = 'none', 
         panel.grid.minor = element_blank(),
         axis.text = element_text(size = 16),
         axis.title = element_text(size = 18),
-        plot.tag.position = c(0.3, 0.8))
+        plot.tag.position = c(0.3, 0.8))+
+  scale_color_viridis(discrete = T, option = 'D')
 
-
+beta_S_PIE_all
 

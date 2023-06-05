@@ -1,27 +1,39 @@
 source('sapling_01_data.R')
-names(visit_01.lui)
 
+names(visit_01.lui)
+names(visit_02.lui)
+
+# DAG
 sapling_dag <- dagitty('dag{
-    Treatment-> RGR <- Livestock;
+    Treatment-> RGR;
     Trench -> RGR;
-    Treatment -> Livestock
+    Treatment -> Livestock;
+    Livestock-> Browsing;
+    Livestock -> Trampling;
+    Trampling -> RGR;
+    Browsing -> RGR
+    
 }')
 
 coordinates(sapling_dag) <-
   list( x=c(Treatment=1,  # column 1
-            Livestock= 1.5, # column 2
-            Trench= 2, # column 2
-            RGR=2 # column 2
+            Livestock= 1, # column 2
+            Trench= 1.5, # column 2
+            RGR=2, # column 2
+            Browsing= 2,
+            Trampling= 3
   ),
   y=c(Treatment=0, # middle row/0 
       RGR=0, # middle row/0 
       Livestock= -1, # above middle row -1
-      Trench= -1 # below the middle row/1
+      Trench= 1, # below the middle row/1
+      Browsing= -1.5,
+      Trampling= -1
   ))
 
 plot(sapling_dag)
 
-# first visit time 0 and second visit time 1
+# first visit= time0 in May and second visit= time1 in October 
 time0 <- visit_01.lui %>%
   select(Treatment,
          village,
@@ -47,7 +59,8 @@ time1 <- visit_02.lui %>%
          tag.no,
          height,
          rcd,
-         disturbance
+         disturbance,
+         resprout
          ) %>%
   mutate(disturbance = replace_na(disturbance, 'none')) %>%
   mutate(disturbance = as.factor(disturbance)) %>%
@@ -59,20 +72,21 @@ names(time0)
 names(time1)
 
 t1t0 <- time0 %>% left_join(time1, multiple = 'all') %>%
-  filter(disturbance != 'dead') %>%
-  filter(disturbance != 'partly_dried') %>% # this is not disturbance.
-  filter(recruit.type != 'unknown') %>%
+  rename(sap.status= disturbance) %>% 
+  # filter(disturbance != 'dead') %>%
+  # filter(disturbance != 'partly_dried') %>% 
+  # filter(recruit.type != 'unknown') %>%
   filter(rcd1 > 0) %>% # omit plant with 0 growth (dead)
   filter(h1 > 0) %>%
-  mutate(disturbance = fct_relevel(
-    disturbance,
+  mutate(sap.status = fct_relevel(
+    sap.status,
     c('none',
       'browsed',
       'dead',
-      'partly_dried', # this is not disturbance.
+      'partly_dried', 
       'trampled')
   )) %>%
-  arrange(disturbance) %>%
+  arrange(sap.status) %>%
   mutate(recruit.type = fct_relevel(recruit.type, c(
     'seedling recruitment',
     'clonal offspring'
@@ -82,9 +96,8 @@ t1t0 <- time0 %>% left_join(time1, multiple = 'all') %>%
 head(t1t0, 4)
 tail(t1t0, 4)
 
-# data for RCD----
-# RCD= Root collar diameter
-
+# data for RCD---- 
+ 
 rgr <- t1t0 %>% select(Treatment, 
                        village, 
                        site, 
@@ -93,33 +106,109 @@ rgr <- t1t0 %>% select(Treatment,
                        recruit.type, 
                        Goat,
                        Trenches,
-                       disturbance,
+                       sap.status,
+                       resprout,
                        h0, 
                        h1,
                        rcd0, 
                        rcd1
                        ) %>% 
-  mutate(rgrH = log(h1) - log(h0)) %>%  # height
-  mutate(rgr_rcd = log(rcd1) - log(rcd0)) # rcd
+  mutate(rgrH = log(h1) - log(h0)) %>%  # height in cm
+  mutate(rgr_rcd = log(rcd1) - log(rcd0)) %>%  # rcd (RCD= Root collar diameter in cm)
+  select(Treatment, 
+         village, 
+         site,
+         sci.name, 
+         # tag.no,
+         # recruit.type, 
+         Goat,
+         Trenches,
+         sap.status,
+         resprout,
+         # h0, 
+         # h1,
+         # rcd0, 
+         # rcd1,
+         rgrH,
+         rgr_rcd
+  ) %>% 
+  mutate(sap_health= case_when(
+    sap.status== 'none' ~ 1,
+    sap.status== 'trampled' ~ 2,
+    sap.status== 'browsed' ~ 3,
+    sap.status== 'partly_dried' ~ 4
+  ))
+
+names(rgr)
+head(rgr, 3)
+
+# percentage of saplings browsed and trampled
+rgr %>% 
+  group_by(
+    # village,
+           # site, 
+           # sci.name, 
+           sap_health,
+           sap.status,
+           Treatment, 
+           # Goat, 
+           # Trenches
+  ) %>% 
+  summarise(Percentage= round(n()/ nrow(rgr) * 100, 2),.groups = 'drop'
+  ) %>% view()
+# same on a bar plot
+rgr %>% 
+  group_by(
+    # village,
+    # site, 
+    # sci.name, 
+    sap_health,
+    sap.status,
+    Treatment, 
+    # Goat, 
+    # Trenches
+  ) %>% 
+  summarise(Percentage= round(n()/ nrow(rgr) * 100, 2),.groups = 'drop'
+  ) %>% ggplot(aes(x= Treatment, y= Percentage, fill= sap.status))+
+  geom_bar(stat = 'identity', position = 'dodge')
 
 
-rgr %>% select(rgr_rcd) %>%
-  arrange (desc(rgr_rcd)) %>% tail(5) # note the -ve values in rgr_rcd
 
-# rgr %>% View()
+# examine how browsing and trampling is influenced by the number of livestock
+sap_status <- rgr %>% 
+  group_by(village, 
+           site, 
+           # sci.name, 
+           sap_health,
+           sap.status,
+           Treatment, 
+           Goat, 
+           Trenches
+  ) %>% 
+  summarise(Percentage= round(n()/ nrow(rgr) * 100, 2),.groups = 'drop'
+  ) %>% 
+  mutate(goatdat= if_else(sap.status== 'browsed', 1, 0)) %>% 
+  mutate(trampdat= if_else(sap.status== 'trampled', 1, 0))
 
-# to shift rgr_rcd values up by a constant amount (the absolute minimum value of 'rgr_rcd'
-# plus one), so that the smallest value becomes 1.
-# This should make the response variable non-negative and suitable for use
-# with the negative binomial distribution.
+head(sap_status, 3)
 
-rgr$rgr_rcd <- rgr$rgr_rcd + abs(min(rgr$rgr_rcd)) + 1
+sap_status %>% ggplot(aes(x= goatdat, fill= Treatment))+
+  geom_bar(position = 'dodge')
 
-rgr %>% select(rgr_rcd) %>%
-  arrange (desc(rgr_rcd)) %>% tail(5)
+sap_status %>% ggplot(aes(x= trampdat, fill= Treatment))+
+  geom_bar(position = 'dodge')
 
-rgr %>% select(rgr_rcd) %>%
-  arrange (desc(rgr_rcd)) %>% head(5)
+sap_status %>% filter(sap.status== 'browsed') %>% ggplot(aes(x= Treatment, y= Percentage))+
+  geom_boxplot()
+
+sap_status %>% filter(sap.status== 'trampled') %>% ggplot(aes(x= Treatment, y= Percentage))+
+  geom_boxplot()
+
+sap_status %>% filter(sap.status== 'none') %>% ggplot(aes(x= Treatment, y= Percentage))+
+  geom_boxplot()
+
+sap_status %>% filter(sap.status== 'partly_dried') %>% ggplot(aes(x= Treatment, y= Percentage))+
+  geom_boxplot()
 
 # rgr of all species vs. treatment
 rgr %>%
@@ -131,26 +220,17 @@ ggplot(rgr, aes(y = sci.name, x = rgr_rcd)) +
   geom_boxplot() +
   facet_wrap( ~ Treatment)
 
-# rgr_rcd of all species vs. treatment and types of re-sprouts observed after disturbances
+# rgr_rcd of all species vs. treatment and types of re-sprouts observed after sap.status
 rgr %>%
   ggplot(aes(y = rgr_rcd)) +
-  geom_boxplot(aes(fill = disturbance)) + # trampling and browsing
+  geom_boxplot(aes(fill = sap.status)) + # trampling and browsing
   facet_wrap( ~ Treatment) +
   geom_hline(aes(yintercept = mean(rgr_rcd)), col = 'red', lty = 2)
 
-# facet by type of disturbance 
-rgr %>%
-  ggplot(aes(y = rgr_rcd, x= Treatment)) +
-  geom_boxplot(aes(fill = disturbance)) + # trampling and browsing
-  facet_wrap( ~ recruit.type) +
-  geom_hline(aes(yintercept = mean(rgr_rcd)), col = 'red', lty = 2)
-
-names(rgr)
-
-rgr %>%
-  ggplot() +
-  geom_density(aes(x = rgr_rcd, col = Treatment)) + facet_wrap( ~ sci.name)
-# seven common species
+# rgr %>%
+#   ggplot() +
+#   geom_density(aes(x = rgr_rcd, col = Treatment)) + facet_wrap( ~ sci.name)
+# # seven common species
 
 hist(rgr$rgr_rcd)
 
@@ -161,14 +241,7 @@ boxplot(rgr_rcd ~ village, data = rgr)
 
 # all of them have more than three levels!
 names(rgr)
-
 head(rgr, 3)
-
-# data for Height----
-rgr$rgrH <-
-  rgr$rgrH + abs(min(rgr$rgrH)) + 1 # to shift rgrH values up by
-# a constant amount (the absolute minimum value of 'rgrH'
-# plus one), so that the smallest value becomes 1.
 
 # rgrH of all species vs. treatment
 rgr %>%
@@ -183,27 +256,24 @@ ggplot(rgr, aes(y = sci.name, x = rgrH)) +
 # rgrH of all species vs. treatment and types of resprouts observed after disturbances
 rgr %>%
   ggplot(aes(y = rgrH)) +
-  geom_boxplot(aes(fill = disturbance)) + # trampling and browsing
+  geom_boxplot(aes(fill = sap.status)) + # trampling and browsing
   facet_wrap( ~ Treatment) +
   geom_hline(aes(yintercept = mean(rgrH)), col = 'red', lty = 2)
 
-# rgrH facet by disturbance
-rgr %>%
-  ggplot(aes(y = rgrH, x= Treatment)) +
-  geom_boxplot(aes(fill = disturbance)) + # trampling and browsing
-  facet_wrap( ~ recruit.type) +
-  geom_hline(aes(yintercept = mean(rgrH)), col = 'red', lty = 2)
-
-rgr %>%
-  ggplot() +
-  geom_density(aes(x = rgrH, col = Treatment)) + facet_wrap( ~ sci.name)
-# seven common species
+# rgr %>%
+#   ggplot() +
+#   geom_density(aes(x = rgrH, col = Treatment)) + facet_wrap( ~ sci.name)
+# # seven common species
 
 glimpse(rgr)
 
-# rgr.mod.rcd <-
+# Models----
+# rgr_rcd----
+
+# rcd ~ treatment
+# mod.rgr.treat <-
 #   brm(
-#     rgr_rcd ~ Treatment + disturbance + (1 | site),
+#     rgr_rcd ~ Treatment + (1 | site),
 #     data =  rgr,
 #     family = gaussian(),
 #     warmup = 1000,
@@ -211,176 +281,255 @@ glimpse(rgr)
 #     chains = 4,
 #     control = list(adapt_delta=0.95)
 #   )
-# save(rgr.mod.rcd, file='rgr.mod.rcd.Rdata')
+# save(mod.rgr.treat, file='mod.rgr.treat.Rdata')
 
-load('rgr.mod.rcd.Rdata')
-pp_check(rgr.mod.rcd)
+load('mod.rgr.treat.Rdata')
+pp_check(mod.rgr.treat)
 
 # Model convergence
-mcmc_plot(rgr.mod.rcd,
+mcmc_plot(mod.rgr.treat,
           type = 'trace')
 
-mcmc_plot(rgr.mod.rcd,
+mcmc_plot(mod.rgr.treat,
           type = "acf_bar")
 
-mcmc_plot(rgr.mod.rcd,
+mcmc_plot(mod.rgr.treat,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'grey')
 
-summary(rgr.mod.rcd)
-conditional_effects(rgr.mod.rcd)
-conditional_effects(rgr.mod.rcd, effects = 'Treatment:disturbance')
+summary(mod.rgr.treat)
+conditional_effects(mod.rgr.treat)
 
-rgr.mod.rcd_i <- # interaction
-  brm(
-    rgr_rcd ~ Treatment * disturbance + (1 | site),
-    data =  rgr,
-    family = gaussian(),
-    warmup = 1000,
-    iter = 4000,
-    chains = 4,
-    control = list(adapt_delta=0.95)
-  )
-save(rgr.mod.rcd_i, file= 'rgr.mod.rcd_i.Rdata')
+# rcd ~ treatment * goat
 
-load('rgr.mod.rcd_i.Rdata')
-
-pp_check(rgr.mod.rcd_i)
-summary(rgr.mod.rcd_i)
-conditional_effects(rgr.mod.rcd_i)
-
-hist(rgr$rgrH)
-
-# which predictor to take as a random effect?
-boxplot(rgrH ~ village, data = rgr)
-boxplot(rgrH ~ site, data = rgr)
-
-# all of them have more than three levels!
-
-# rgr.mod.H <-
+# mod.rgr.treat.goat <-
 #   brm(
-#     rgrH ~ Treatment + disturbance + (1 | site),
+#     rgr_rcd ~ Treatment * Goat + (1 | site),
 #     data =  rgr,
 #     family = gaussian(),
 #     warmup = 1000,
 #     iter = 4000,
-#     chains = 4
+#     chains = 4,
+#     control = list(adapt_delta=0.95)
 #   )
-# save(rgr.mod.H, file='rgr.mod.H.Rdata')
+# save(mod.rgr.treat.goat, file='mod.rgr.treat.goat.Rdata')
 
-load('rgr.mod.H.Rdata')
-pp_check(rgr.mod.H)
+load('mod.rgr.treat.goat.Rdata')
+pp_check(mod.rgr.treat.goat)
 
 # Model convergence
-mcmc_plot(rgr.mod.H,
+mcmc_plot(mod.rgr.treat.goat,
           type = 'trace')
 
-mcmc_plot(rgr.mod.H,
+mcmc_plot(mod.rgr.treat.goat,
           type = "acf_bar")
 
-mcmc_plot(rgr.mod.H,
+mcmc_plot(mod.rgr.treat.goat,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'grey')
 
-summary(rgr.mod.H)
-conditional_effects(rgr.mod.H)
-conditional_effects(rgr.mod.H, effects = 'Treatment:disturbance')
+summary(mod.rgr.treat.goat)
+conditional_effects(mod.rgr.treat.goat)
+conditional_effects(mod.rgr.treat.goat, effects = 'Treatment:Goat')
+conditional_effects(mod.rgr.treat.goat, effects = 'Goat:Treatment')
 
 
-
-rgr.mod.H.1 <-
-  brm(
-    rgrH ~ Treatment * disturbance + (1 | site),
-    data =  rgr,
-    family = gaussian(),
-    warmup = 1000,
-    iter = 4000,
-    chains = 4
-  )
-save(rgr.mod.H.1, file= 'rgr.mod.H.1.Rdata')
-
-load('rgr.mod.H.1.Rdata')
-pp_check(rgr.mod.H.1)
-summary(rgr.mod.H.1)
-conditional_effects(rgr.mod.H.1)
-
-
-# rcd of common species across 3 treatments----
-# com_Species <- rgr %>%
-#   filter(
-#     sci.name %in% c(
-#       'Acacia chundra',
-#       'Cassia fistula',
-#       'Chloroxylon swietenia',
-#       'Dalbergia paniculata',
-#       'Dolichandrone atrovirens',
-#       'Tectona grandis',
-#       'Wrightia tinctoria'
-#     )
-#   )
-# 
-# 
-# com_Species %>% names()
-# 
-# com_Species_mod <-
+# rcd ~ treatment * trench
+# mod.rgr.treat.trench <-
 #   brm(
-#     rgr_rcd ~ Treatment + disturbance + recruit.type + (1 | sci.name),
-#     data =  com_Species,
+#     rgr_rcd ~ Treatment * Trenches + (1 | site),
+#     data =  rgr,
 #     family = gaussian(),
 #     warmup = 1000,
 #     iter = 4000,
 #     chains = 4,
-#     control = list(adapt_delta= 0.99)
+#     control = list(adapt_delta=0.95)
 #   )
-# # save(com_Species_mod, file='com_Species_mod.Rdata')
-# 
-# # load('com_Species_mod.Rdata')
-# # pp_check(com_Species_mod)
-# 
-# # Model convergence
-# mcmc_plot(com_Species_mod,
-#           type = 'trace')
-# 
-# mcmc_plot(com_Species_mod,
-#           type = "acf_bar")
-# 
-# mcmc_plot(com_Species_mod,
-#           type = "areas",
-#           prob = 0.95) + # see if predictors CI contain zero.
-#   geom_vline(xintercept = 0, col = 'grey')
-# 
-# summary(com_Species_mod)
-# conditional_effects(com_Species_mod)
+# save(mod.rgr.treat.trench, file='mod.rgr.treat.trench.Rdata')
 
-# height of common species 
-# com_Species_H_mod <-
+load('mod.rgr.treat.trench.Rdata')
+pp_check(mod.rgr.treat.trench)
+
+# Model convergence
+mcmc_plot(mod.rgr.treat.trench,
+          type = 'trace')
+
+mcmc_plot(mod.rgr.treat.trench,
+          type = "acf_bar")
+
+mcmc_plot(mod.rgr.treat.trench,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+summary(mod.rgr.treat.trench)
+conditional_effects(mod.rgr.treat.trench)
+conditional_effects(mod.rgr.treat.trench, effects = 'Trenches:Treatment')
+conditional_effects(mod.rgr.treat.trench, effects = 'Treatment:Trenches')
+
+# rgrH----
+# rgrh ~ treatment
+# mod.rgrH.treat <-
 #   brm(
-#     rgrH ~ treatment + disturbance + recruit.type + (1 | sci.name),
-#     data =  com_Species,
+#     rgrH ~ Treatment + (1 | site),
+#     data =  rgr,
 #     family = gaussian(),
 #     warmup = 1000,
 #     iter = 4000,
 #     chains = 4,
-#     control = list(adapt_delta= 0.99)
+#     control = list(adapt_delta=0.95)
 #   )
-# save(com_Species_H_mod, file='com_Species_H_mod.Rdata')
+# save(mod.rgrH.treat, file='mod.rgrH.treat.Rdata')
 
-# load('com_Species_H_mod.Rdata')
-# pp_check(com_Species_H_mod)
-# 
-# # Model convergence
-# mcmc_plot(com_Species_H_mod,
-#           type = 'trace')
-# 
-# mcmc_plot(com_Species_H_mod,
-#           type = "acf_bar")
-# 
-# mcmc_plot(com_Species_H_mod,
-#           type = "areas",
-#           prob = 0.95) + # see if predictors CI contain zero.
-#   geom_vline(xintercept = 0, col = 'grey')
-# 
-# summary(com_Species_H_mod)
-# conditional_effects(com_Species_H_mod)
+load('mod.rgrH.treat.Rdata')
+pp_check(mod.rgrH.treat)
+
+# Model convergence
+mcmc_plot(mod.rgrH.treat,
+          type = 'trace')
+
+mcmc_plot(mod.rgrH.treat,
+          type = "acf_bar")
+
+mcmc_plot(mod.rgrH.treat,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+summary(mod.rgrH.treat)
+conditional_effects(mod.rgrH.treat)
+
+
+# rgrh ~ treatment * goat
+# mod.rgrH.treat.goat <-
+#   brm(
+#     rgrH ~ Treatment * Goat + (1 | village),
+#     data =  rgr,
+#     family = gaussian(),
+#     warmup = 1000,
+#     iter = 4000,
+#     chains = 4,
+#     control = list(adapt_delta=0.95)
+#   )
+# save(mod.rgrH.treat.goat, file='mod.rgrH.treat.goat.Rdata')
+
+load('mod.rgrH.treat.goat.Rdata')
+pp_check(mod.rgrH.treat.goat)
+
+# Model convergence
+mcmc_plot(mod.rgrH.treat.goat,
+          type = 'trace')
+
+mcmc_plot(mod.rgrH.treat.goat,
+          type = "acf_bar")
+
+mcmc_plot(mod.rgrH.treat.goat,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+summary(mod.rgrH.treat.goat)
+conditional_effects(mod.rgrH.treat.goat)
+
+
+# rgrh ~ treatment * trench
+# mod.rgrH.treat.trench <-
+#   brm(
+#     rgrH ~ Treatment * Trenches + (1 | site),
+#     data =  rgr,
+#     family = gaussian(),
+#     warmup = 1000,
+#     iter = 4000,
+#     chains = 4,
+#     control = list(adapt_delta=0.95)
+#   )
+# save(mod.rgrH.treat.trench, file='mod.rgrH.treat.trench.Rdata')
+
+load('mod.rgrH.treat.trench.Rdata')
+pp_check(mod.rgrH.treat.trench)
+
+# Model convergence
+mcmc_plot(mod.rgrH.treat.trench,
+          type = 'trace')
+
+mcmc_plot(mod.rgrH.treat.trench,
+          type = "acf_bar")
+
+mcmc_plot(mod.rgrH.treat.trench,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+summary(mod.rgrH.treat.trench)
+conditional_effects(mod.rgrH.treat.trench)
+
+# goat casuing browsing and trampling----
+
+names(sap_status)
+head(sap_status, 3)
+
+# treatment and number of goats in a village as predictors of browsing
+# sap_browse <- brm(goatdat ~ Treatment * Goat + (1|village), data= sap_status,
+#                   family = bernoulli(link = "logit"),
+#                   chains = 4,
+#                   warmup = 1000,
+#                   iter = 2000,
+#                   thin = 1
+#                   )
+# save(sap_browse, file= 'sap_browse.Rdata')
+
+load('sap_browse.Rdata')
+pp_check(sap_browse)
+
+# Model convergence
+mcmc_plot(sap_browse,
+          type = 'trace')
+
+mcmc_plot(sap_browse,
+          type = "acf_bar")
+
+mcmc_plot(sap_browse,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+
+summary(sap_browse)
+conditional_effects(sap_browse)
+
+# conditional_effects(sap_browse, effects = 'Treatment:Goat')
+
+# trampling
+# treatment and number of goats in a village as predictors of trampling
+# sap_tramp <- brm(trampdat ~ Treatment * Goat + (1|village), data= sap_status,
+#                  family = bernoulli(link = "logit"),
+#                  chains = 4,
+#                  warmup = 1000,
+#                  iter = 2000,
+#                  thin = 1
+#                  )
+# save(sap_tramp, file= 'sap_tramp.Rdata')
+
+load('sap_tramp.Rdata')
+pp_check(sap_tramp)
+
+# Model convergence
+mcmc_plot(sap_tramp,
+          type = 'trace')
+
+mcmc_plot(sap_tramp,
+          type = "acf_bar")
+
+mcmc_plot(sap_tramp,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+
+summary(sap_tramp)
+conditional_effects(sap_tramp)
+
+conditional_effects(sap_tramp, effects = 'Treatment:Goat')
+

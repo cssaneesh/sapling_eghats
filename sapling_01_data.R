@@ -77,12 +77,14 @@ visit.02 <- visit.02 %>%
     Treatment,
     height,
     rcd,
-    disturbance
+    disturbance,
+    resprout
   ) %>%
   mutate(
     Treatment = as.factor(Treatment),
     village = as.factor(village),
-    disturbance = as.factor(disturbance)
+    disturbance = as.factor(disturbance),
+    resprout= as.factor(resprout)
   ) %>%
   mutate(Treatment= fct_relevel(Treatment, 'Control', 'CPFA', 'CAFA')) %>% 
   arrange(Treatment)
