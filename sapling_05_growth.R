@@ -187,7 +187,8 @@ sap_status <- rgr %>%
   summarise(Percentage= round(n()/ nrow(rgr) * 100, 2),.groups = 'drop'
   ) %>% 
   mutate(Browsing= if_else(sap.status== 'browsed', 1, 0)) %>% 
-  mutate(Trampling= if_else(sap.status== 'trampled', 1, 0))
+  mutate(Trampling= if_else(sap.status== 'trampled', 1, 0)) %>% 
+  mutate(Wat.stress= if_else(sap.status== 'partly_dried', 1, 0))
 
 head(sap_status, 3)
 
@@ -195,6 +196,9 @@ sap_status %>% ggplot(aes(x= Browsing, fill= Treatment))+
   geom_bar(position = 'dodge')
 
 sap_status %>% ggplot(aes(x= Trampling, fill= Treatment))+
+  geom_bar(position = 'dodge')
+
+sap_status %>% ggplot(aes(x= Wat.stress, fill= Treatment))+
   geom_bar(position = 'dodge')
 
 sap_status %>% filter(sap.status== 'browsed') %>% ggplot(aes(x= Treatment, y= Percentage))+
@@ -529,4 +533,36 @@ summary(sap_tramp)
 conditional_effects(sap_tramp)
 
 conditional_effects(sap_tramp, effects = 'Treatment:Goat')
+
+
+# water stress
+# treatment and number of goats in a village as predictors of trampling
+# sap_waterstress <- brm(Wat.stress ~ Treatment + (1|village), data= sap_status,
+#                  family = bernoulli(link = "logit"),
+#                  chains = 4,
+#                  warmup = 1000,
+#                  iter = 2000,
+#                  thin = 1
+#                  )
+# save(sap_waterstress, file= 'sap_waterstress.Rdata')
+
+load('sap_waterstress.Rdata')
+pp_check(sap_waterstress)
+
+# Model convergence
+mcmc_plot(sap_waterstress,
+          type = 'trace')
+
+mcmc_plot(sap_waterstress,
+          type = "acf_bar")
+
+mcmc_plot(sap_waterstress,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+
+summary(sap_waterstress)
+conditional_effects(sap_waterstress)
+
 
