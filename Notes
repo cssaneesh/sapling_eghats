@@ -1,0 +1,35 @@
+MODEL for S
+______________
+S is the number of species in a given area or community in my case treatment. It is a measure of species richness and represents the total number of different species present.
+
+    The response variable "S" is modeled as a function of the predictor variables "treatment", "LUI", Adult species, and Number of adult trees, with a random intercept for the grouping variable 'village'. The formula "(1 | village)" specifies that the intercepts for each level of "site" are allowed to vary randomly around a group-level mean.
+    The "family" argument specifies the distributional assumption of the model. In this case, the "poisson()" function is used to specify that the response variable "S" is distributed binomially. hist(alpha_sum_sd$S)
+
+MODEL for Sn 
+______________
+Sn (rarefied richness) is the number of species that are unique to a particular area or community. It is a measure of species endemism and represents the total number of species that are found only in that area and nowhere else.)
+
+Sn (rarefied richness) is a measure of species richness that accounts for differences in sample size or effort among sites or samples. It estimates the number of species expected to be observed when the number of individuals or samples is standardized across different sites. Rarefaction curves are often used to calculate Sn, which allows for comparisons of species richness among sites with different sample sizes. Sn provides a measure of the total number of distinct species present in a community.
+
+Model for ENSPIE
+-----------------
+
+ENSPIE ~ treatment + Nu.adu + Sp.adu + LUI + (1 | village) 
+
+ENSPIE (Effective Number of Species by Patch Size and Evenness) is a diversity index used to quantify the diversity of species in a given area or community. It is a modification of the Effective Number of Species (ENS) index, which measures the number of equally abundant species that would give the same value of diversity as the actual community.
+
+ENSPIE takes into account not only the number of species in a community, but also their relative abundances and the spatial scale of analysis. It is calculated as the product of two components: the Effective Number of Species by Patch Size (ENSPS) and the evenness of the community.
+
+ENSPS measures the diversity of species in each patch of habitat within the community, taking into account both the number of species and their relative abundances. It is calculated as the reciprocal of the Simpson's concentration index for each patch, and then averaged across all patches in the community.
+
+The evenness component of ENSPIE measures the degree to which the species in the community are evenly distributed in terms of their relative abundances. It is calculated as the reciprocal of the Gini-Simpson index for the community, which ranges from 0 (all species are equally abundant) to 1 (one species dominates the community). ENSPIE provides a more comprehensive measure of diversity than simple species richness or diversity indices that only consider the number of species. It takes into account the abundance and evenness of species, as well as the spatial scale of analysis.
+
+
+
+Sn and ENSPIE
+
+The relationship between Sn (rarefied richness) and ENSPIE (Effective Number of Species by Patch Size and Evenness) can vary depending on the specific characteristics of the ecological community being studied. In general, the relationship between Sn and ENSPIE is influenced by the distribution of species abundances within the community.
+
+If the species abundances are evenly distributed among the different species in a community, then both Sn and ENSPIE are expected to increase together. This means that as the observed species richness (Sn) increases, the effective number of species (ENSPIE) also increases, indicating a higher diversity in terms of both the number of species and their evenness.
+
+However, if the species abundances are unevenly distributed, with a few dominant species and many rare species, the relationship between Sn and ENSPIE can be more complex. In such cases, it is possible for Sn to increase while ENSPIE remains relatively stable or even decreases. This occurs when adding more rare species to the community (increasing Sn) does not substantially affect the effective number of species (ENSPIE) due to the dominance of a few highly abundant species.
