@@ -6,7 +6,7 @@ Site_prep_iNext <- seedling.dat %>%
   filter(sci.name!= 'Senna siamea') %>%  # introduced ornamental tree
   mutate(species = sci.name) %>%
   arrange(site, Treatment) %>%
-  filter(LUI <= 1.20) %>% # medium LUI
+  filter(LUI < 1.20) %>% # medium LUI
   select(-c(sci.name, adult, adu.stat, LUI, Goat, Trenches)) %>%
   mutate(pres = as.numeric(1)) %>% 
   mutate(Treatment = factor(Treatment)) %>% # to order Treatments in the plot
@@ -113,22 +113,30 @@ acc.curve <- ggplot(Site.hill.TD ,
 
 acc.curve
 
-fig3 <- acc.curve +
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), 
-                                  panel.grid.minor = element_blank(), 
-                                  strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position = c(1.32, .96),
-                                  legend.justification = c('right', 'top'),
-                                  legend.background = element_rect(fill = NA))+
-  guides(fill= 'none')
+figure3 <- acc.curve +
+  scale_color_viridis(discrete = T, option = "D")  +
+  scale_fill_viridis(discrete = T, option = "D")  +
+  theme_bw(base_size = 14) + theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(colour =
+                                      "black", fill = "white"),
+    # legend.position = c(x=1.32, y=.96),
+    legend.position = c(x=1.50, y=.96),
+    legend.justification = c('right', 'top'),
+    legend.background = element_rect(fill = NA)
+  ) +
+  guides(fill = 'none')
 
 
-fig3
+figure3
 
-save(fig3, file= 'fig3.Rdata')
+save(figure3, file= 'figure3.Rdata')
 
-load(file= 'fig3.Rdata')
-fig3
+load(file= 'figure3.Rdata')
+figure3
 
+ggsave('figure3.jpg', figure3,
+       width = 10,
+       height = 6,
+       dpi = 300)

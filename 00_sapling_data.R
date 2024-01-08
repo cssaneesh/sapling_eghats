@@ -50,6 +50,10 @@ visit.01 <- visit.01 %>%
   mutate(Treatment= fct_relevel(Treatment, 'Control', 'CPFA', 'CAFA')) %>% 
   arrange(Treatment)
 
+# number of saplings
+visit.01 %>% group_by(Treatment) %>% 
+  summarise(numb_saplings= round(n()/2000*100))
+
 
 visit.02 <- read_excel("sapling_oct_2020.xlsx", 
                        sheet = "Sheet1")  
@@ -278,3 +282,7 @@ sap_status <- rgr %>%
     select(sci.name))
 
 com.species  <- left_join(freq.sp.list, sap_status, multiple= 'all')
+
+# View(com.species)
+
+com.species %>% distinct(site, Treatment) %>% group_by(Treatment) %>% summarise(sites=n())

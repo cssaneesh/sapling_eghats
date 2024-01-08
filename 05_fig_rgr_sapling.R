@@ -223,7 +223,7 @@ rcdH.allTreat
 rcdH.allSp
 
 fig5allsp <- (rcdrgr.allTreat|rcdrgr.allSp)/(rcdH.allTreat|rcdH.allSp)+ plot_layout(heights = c(10,10,2))
-save(fig5allsp, file= 'fig5allsp.Rdata')
+# save(fig5allsp, file= 'fig5allsp.Rdata')
 
 load(file= 'fig5allsp.Rdata')
 fig5allsp
@@ -245,7 +245,7 @@ Common.species <- rgr %>% filter(sci.name %in% c('Acacia chundra',
 #                  family = student(),
 #                  chains = 4,
 #                  warmup = 1000,
-#                  iter = 4000,
+#                  iter = 5000,
 #                  thin = 1
 #                  )
 # save(com.no.dist, file= 'com.no.dist.Rdata')
@@ -369,10 +369,14 @@ rgrrcd.a <- ggplot(data = com.no.dist.df,
     linewidth = 0.9,
     width = 0.1
   ) +
-  labs(y= 'RGR (Root collar diameter)')+scale_color_viridis(discrete = T, option="D")  + 
+  labs(y= 'Relative Growth: \n Root Collar Diameter', subtitle= '(a)') + 
+  scale_color_viridis(discrete = T, option="D")  + 
   scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
+  theme_bw(base_size=14 ) + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")
+
+
 
 rgrrcd.a
 
@@ -392,11 +396,14 @@ rgrrcd.b.sp <- ggplot(data = com.no.dist.sp.df,
     # position = position_dodge(width = 0.5),
     linewidth = 0.9,
     width = 0.1
-  ) +
-  labs(x= 'RGR (Root collar diameter)', y= " ")+
-  theme(legend.position = 'none')+scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
+  ) + 
+  geom_vline(xintercept = 0.70, col= 'black', linetype= 'dashed', alpha= 0.8, linewidth= 0.8)+ # 0.70 is overall mean growth
+  labs(x= 'Relative Growth: Root Collar Diameter', y= "Species", subtitle= '(b)')+
+  theme(legend.position = 'none')+
+  # scale_color_viridis(discrete = T, option="D")  + 
+  # scale_fill_viridis(discrete = T, option="D")  + 
+  theme_bw(base_size=14 ) + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")
 
 rgrrcd.b.sp
@@ -418,7 +425,7 @@ rgrh.c <- ggplot(data = com.no.dist.rgrH.df,
     linewidth = 0.9,
     width = 0.1
   ) +
-  labs(y= 'RGR (Height)')+scale_color_viridis(discrete = T, option="D")  + 
+  labs(y= 'Relative Growth: \n Height', subtitle= '(c)')+scale_color_viridis(discrete = T, option="D")  + 
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")
@@ -442,20 +449,24 @@ rgrh.d.sp <- ggplot(data = com.no.dist.rgrH.sp.df,
     linewidth = 0.9,
     width = 0.1
   ) +
-  labs(x= 'RGR (Height)', y= " ")+
+  geom_vline(xintercept = 0.70, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # 0.7056 is overall mean growth
+  labs(x= 'Relative Growth: Height', y= "Species", subtitle= '(d)')+
   theme(legend.position = 'none')+
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
+  # scale_color_viridis(discrete = T, option="D")  + 
+  # scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")
 
 rgrh.d.sp
 
 
-fig5withcomsp <- (rgrrcd.a|rgrrcd.b.sp)/(rgrh.c|rgrh.d.sp)+ plot_layout(heights = c(10,10,2))
-save(fig5withcomsp, file= 'fig5withcomsp.Rdata')
+figure5 <- (rgrrcd.a|rgrrcd.b.sp)/(rgrh.c|rgrh.d.sp)+ plot_layout(heights = c(10,10,2))
+save(figure5, file= 'figure5.Rdata')
 
-load(file= 'fig5withcomsp.Rdata')
-fig5withcomsp
+load(file= 'figure5.Rdata')
+figure5
 
-
+ggsave('figure5.jpg', figure5,
+       width = 10,
+       height = 6,
+       dpi = 300)

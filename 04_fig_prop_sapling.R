@@ -1,9 +1,13 @@
 source('00_sapling_data.R')
 
 names(sap_status)
+names(com.species)
+
 com.species %>% group_by(Treatment, sci.name) %>% 
   summarise(n()) # %>% View()
 
+com.species %>% group_by(Treatment) %>% 
+  summarise(N_sites=n_distinct(site))
 
 # species vs browsing----
 # sp.browse <- brm(Browsing ~ sci.name+ (1|site), data= com.species,
@@ -88,16 +92,17 @@ summary(no.stress.sp)
 conditional_effects(no.stress.sp)
 
 # model without interaction with species----
-sapstatus.no.dist <- brm(None ~ Treatment + (1|site),
-                         data= com.species, # common species found all treatments with more than 2 indivisuals
-                         # data= sap_status, # all species
-                 family = bernoulli(link = "logit"),
-                 chains = 4,
-                 warmup = 1000,
-                 iter = 4000,
-                 thin = 1
-                 )
-save(sapstatus.no.dist, file= 'sapstatus.no.dist.Rdata')
+# sapstatus.no.dist <- brm(None ~ Treatment + (1|site),
+#                          data= com.species, # common species found all treatments with more than 5 indivisuals
+#                          # data= sap_status, # all species
+#                  family = bernoulli(link = "logit"),
+#                  chains = 4,
+#                  warmup = 1000,
+#                  iter = 4000,
+#                  thin = 1,
+#                  control = list(adapt_delta = 0.9) # divergent 5!
+#                  )
+# save(sapstatus.no.dist, file= 'sapstatus.no.dist.Rdata')
 
 load('sapstatus.no.dist.Rdata')
 pp_check(sapstatus.no.dist)
@@ -142,6 +147,47 @@ no.stress.df <- as.data.frame(no.stress.ce$sci.name)
 
 sapstatus.no.dist.ce <- conditional_effects(sapstatus.no.dist)
 sapstatus.no.dist.df <- as.data.frame(sapstatus.no.dist.ce$Treatment)
+
+# Convert log odds to probability sapstatus.no.dist----
+# Given log odds for Control, CPFA, and CAFA
+
+no.stress
+log_odds_Acaciachundra <- -2.08
+log_odds_Cassiafistula <- 0.59
+log_odds_Chloroxylonswietenia <- 1.17
+log_odds_Dalbergiapaniculata <- 0.21
+log_odds_Dolichandroneatrovirens <-  1.21
+log_odds_Wrightiatinctoria <- 0.41
+# Convert log odds to probability
+prob_Acaciachundra <- exp(log_odds_Acaciachundra) / (1 + exp(log_odds_Acaciachundra))*100
+prob_Cassiafistula <- exp(log_odds_Cassiafistula) / (1 + exp(log_odds_Cassiafistula))*100
+prob_Chloroxylonswietenia <- exp(log_odds_Chloroxylonswietenia) / (1 + exp(log_odds_Chloroxylonswietenia))*100
+prob_Dalbergiapaniculata <- exp(log_odds_Dalbergiapaniculata) / (1 + exp(log_odds_Dalbergiapaniculata))*100
+prob_Dolichandroneatrovirens <- exp(log_odds_Dolichandroneatrovirens) / (1 + exp(log_odds_Dolichandroneatrovirens))*100
+prob_Wrightiatinctoria <- exp(log_odds_Wrightiatinctoria) / (1 + exp(log_odds_Wrightiatinctoria))*100
+
+# prob_Acaciachundra= 11%
+# prob_Cassiafistula= 64%
+# prob_Chloroxylonswietenia= 76%
+# prob_Dalbergiapaniculata= 55%
+# prob_Dolichandroneatrovirens= 77%
+# prob_Wrightiatinctoria= 60% 
+
+# Given log odds for Control, CPFA, and CAFA
+# sapstatus.no.dist
+sapstatus.no.dist
+log_odds_control <- -0.79
+log_odds_cpfa <- -0.13
+log_odds_cafa <- -0.98
+
+# Convert log odds to probability
+prob_control <- exp(log_odds_control) / (1 + exp(log_odds_control))*100
+prob_cpfa <- exp(log_odds_cpfa) / (1 + exp(log_odds_cpfa))*100
+prob_cafa <- exp(log_odds_cafa) / (1 + exp(log_odds_cafa))*100
+
+# prob_control= 31.21
+# prob_cpfa= 46.75
+# prob_cafa= 27.28
 
 
 
@@ -339,7 +385,7 @@ no.stress.prop <- ggplot() +
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(y= 'Proportion'  , subtitle= 'a)')+
+  labs(y= '% of tree saplings with \n no stress and disturbance'  , subtitle= '(a)')+
   guides(fill= 'none')
 
 
@@ -375,17 +421,28 @@ no.stress.sp <- ggplot() +
   # coord_cartesian(xlim = c(0, 1), ) + 
   coord_flip()+
   ylim(0, 1)+
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
+  # scale_color_viridis(discrete = T, option="A")  + 
+  # scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(x= 'Species', y= ' '  , subtitle= 'b)')+
+  labs(x= 'Species', y= 'Probability of remaining undisturbed'  , subtitle= '(b)')+
   guides(fill= 'none')
 
 no.stress.sp
 
-fig4 <- (no.stress.prop|no.stress.sp)
-save(fig4, file= 'fig4.Rdata')
+figure4 <- (no.stress.prop|no.stress.sp)
+figure4
+save(figure4, file= 'figure4.Rdata')
 
-load(file= 'fig4.Rdata')
-fig4
+load(file= 'figure4.Rdata')
+figure4
+
+ggsave('figure4.jpg', figure4,
+       width = 10,
+       height = 6,
+       dpi = 300)
+
+
+
+
+

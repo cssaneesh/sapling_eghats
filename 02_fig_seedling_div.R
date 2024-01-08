@@ -12,7 +12,7 @@ species.level_ad <- seedling.dat %>% # alpha_summary_sd, ad= adult trees
 
 # data preparation for calculating alpha
 alpha_sum_sd <- seedling.dat %>%
-  filter(LUI < 1.20) %>% # filtered out high LUI
+  filter(LUI < 1.20) %>%  #View() # filtered out high LUI
   group_by(site, Treatment, sci.name, village) %>%
   # summarise(abundance= sum(adult),.groups = 'drop') %>% # abundance of adult trees
   group_by(site, Treatment, village) %>%
@@ -53,11 +53,11 @@ alpha_sum_sd <- seedling.dat %>%
 alpha_sum_sd %>% group_by(Treatment) %>% 
   summarise(N_sites=n_distinct(site))
 
-# individual based rarefaction before fitting models----
 
+# individual based rarefaction before fitting models----
 alpha_data_sd <- seedling.dat %>% # sd= seedling
   select(-adu.stat) %>% 
-  filter(seedling>0) %>%  # get rid of all sites with adults but 0 seedlings
+  filter(seedling>0) %>%  # get rid of all sites with adults but 0 seedlings e.g.APA15_CPFA & APA19_CPFA
   group_by(site, Treatment, sci.name) %>%
   summarise(abundance= sum(seedling), .groups = 'drop') %>%
   inner_join(alpha_sum_sd %>% ungroup() %>% 
@@ -79,7 +79,6 @@ alpha_sum_sd <- inner_join(alpha_sum_sd %>% ungroup(),
                             by = c('site', 'Treatment', 'village')
                            )
 # Models-----
-
 names(alpha_sum_sd)
 # number of individuals vs. Treatment, LUI and number of adult trees 
 
@@ -90,7 +89,7 @@ boxplot(N ~ village, data = alpha_sum_sd) # village as a random effect
 #   brm(
 #     N ~ Treatment * LUI + (1|village),
 #     family = poisson(),
-#     data = alpha_sum_sd, 
+#     data = alpha_sum_sd,
 #     chains = 4,
 #     warmup = 1000,
 #     iter = 4000)
@@ -123,11 +122,6 @@ plot.residuals %>%
   geom_point()+
   geom_hline(yintercept = 0, lty= 2, col= 'red')
 
-# plot residuals total adult
-plot.residuals %>%
-  ggplot(aes(x= Nu.adu, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
 
 summary(N.alpha_sd)
 
@@ -175,12 +169,6 @@ plot.residuals %>%
   geom_point()+
   geom_hline(yintercept = 0, lty= 2, col= 'red')
 
-# plot residuals species adults
-plot.residuals %>% 
-  ggplot(aes(x= Sp.adu, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-
 summary(S.alpha.rich_sd)
 
 conditional_effects(S.alpha.rich_sd)
@@ -208,8 +196,8 @@ alpha_sum_sd %>%
 #   family = lognormal() ,
 #   data = alpha_sum_sd,
 #   cores = 4,
-#   chains = 4, 
-#   warmup = 1000, 
+#   chains = 4,
+#   warmup = 1000,
 #   iter = 4000,
 #   # control = list(adapt_delta = 0.9)
 # )
@@ -229,20 +217,16 @@ pp_check(Sn_alpha_sd)
 
 plot.residuals <- cbind(alpha_sum_sd, residuals(Sn_alpha_sd) )
 plot.residuals <- as.data.frame(plot.residuals)
+
 # plot residuals Treatment
 plot.residuals %>% 
   ggplot(aes(x= Treatment, y= Estimate))+
   geom_boxplot()+
   geom_hline(yintercept = 0, lty= 2, col= 'red')
+
 # plot residuals LUI
 plot.residuals %>% 
   ggplot(aes(x= LUI, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-
-# plot residuals species adults
-plot.residuals %>% 
-  ggplot(aes(x= Sp.adu, y= Estimate))+
   geom_point()+
   geom_hline(yintercept = 0, lty= 2, col= 'red')
 
@@ -315,12 +299,6 @@ plot.residuals %>%
   geom_point()+
   geom_hline(yintercept = 0, lty= 2, col= 'red')
 
-# plot residuals species adults
-plot.residuals %>% 
-  ggplot(aes(x= Sp.adu, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-
 
 summary(ENSPIE_alpha_sd)
 
@@ -374,7 +352,7 @@ N <- ggplot() +
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position=" ")+
-  labs(subtitle= 'a)')+
+  labs(subtitle= '(a)')+
   guides(fill= 'none') # remove a section of the legend, here fill= effect__
 
 N
@@ -425,7 +403,7 @@ S <- ggplot() +
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(subtitle= 'b)')+
+  labs(subtitle= '(b)')+
   guides(fill= 'none') # remove a section of the legend, here fill= effect__
 
 S
@@ -476,7 +454,7 @@ Sn <- ggplot() +
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position=" ")+
-  labs(subtitle= 'c)')+
+  labs(subtitle= '(c)')+
   guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
   ylab(expression(S[n]))
 
@@ -530,7 +508,7 @@ ENSPIE <- ggplot() +
                                   panel.grid.minor = element_blank(), 
                                   strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(subtitle= 'd)')+
+  labs(subtitle= '(d)')+
   guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
   ylab(expression(ENS[PIE]))
 
@@ -547,5 +525,11 @@ save(figure2, file='figure2.Rdata')
 
 load('figure2.Rdata')
 figure2
+
+ggsave('figure2.jpg', figure2,
+       width = 10,
+       height = 6,
+       dpi = 300)
+
 
 # end----
