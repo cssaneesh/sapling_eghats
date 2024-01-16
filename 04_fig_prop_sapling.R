@@ -391,6 +391,8 @@ no.stress.prop <- ggplot() +
 
 no.stress.prop
 
+no.stress.df %>% summarise(mean(estimate__))
+
 no.stress.sp <- ggplot() +
   geom_point(
     data = com.species,
@@ -418,9 +420,10 @@ no.stress.sp <- ggplot() +
     linewidth = 1.3,
     width = 0.1
   ) +
+  geom_hline(yintercept = 0.19, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # mean(estimate__)= 0.19
   # coord_cartesian(xlim = c(0, 1), ) + 
   coord_flip()+
-  ylim(0, 1)+
+  ylim(0, 1)+ 
   # scale_color_viridis(discrete = T, option="A")  + 
   # scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
