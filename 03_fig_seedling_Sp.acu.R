@@ -7,7 +7,7 @@ Site_prep_iNext <- seedling.dat %>%
   mutate(species = sci.name) %>%
   arrange(site, Treatment) %>%
   filter(LUI < 1.20) %>% # medium LUI
-  select(-c(sci.name, adult, adu.stat, LUI, Goat, Trenches)) %>%
+  select(-c(sci.name, LUI, Goat, Trenches)) %>%
   mutate(pres = as.numeric(1)) %>% 
   mutate(Treatment = factor(Treatment)) %>% # to order Treatments in the plot
   mutate(Treatment = fct_relevel(Treatment, c("Control","CPFA","CAFA"))) %>% 
@@ -46,36 +46,39 @@ TD_treat_out <-
     nboot = 0
   )
 
-TD_treat_out$DataInfo
+TD_treat_out$TDInfo
 # Assemblage = the Treatment or groups
 # T = Reference sample size
 # U = Total number of incidents
 # S.obs = Observed species richness
 # SC = Sample coverage
 
-TD_treat_out$AsyEst # to see the asymptotic diversity estimates
+TD_treat_out$TDAsyEst # to see the asymptotic diversity estimates
 
 # table of diversity estimates
-TD_treat_out$AsyEst %>% filter(Diversity== 'Simpson diversity') %>%  # q=2 (Simpson diversity) 
-select(-s.e., - LCL, -UCL) %>% 
+TD_treat_out$TDAsyEst %>% filter(qTD == 'Simpson diversity') %>%  # q=2 (Simpson diversity) 
+select(-s.e., -qTD.LCL, -qTD.UCL) %>% 
   rename (Treatment = Assemblage) %>% 
   mutate(Treatment= fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) %>% 
   arrange(Treatment) %>% 
   gt()
 
-
 # Make df for ploting----
-Site.TD.df <- TD_treat_out %>%
-  purrr::pluck("iNextEst", "size_based")
+# Extract from the list=TD_treat_out "TDiNextEst" and "size_based" components
+# TD_treat_out$TDiNextEst
+
+Site.TD.df <- TD_treat_out %>% # Create a new dataframe named Site.TD.df for plotting
+  purrr::pluck("TDiNextEst", "size_based")
+# we will use Site.TD.df for further visualization or analysis
 
 Site_info <- Site_prep_iNext %>%
   distinct() %>% mutate(Assemblage = as.character(Treatment))
 
 Site.hill.TD <-
-  Site.TD.df %>% left_join(Site_info, multiple = 'all') %>%
-  mutate(Order.q  = case_when(Order.q  == "0" ~ "q = 0", # q=0 species richness
+  Site.TD.df %>% left_join(Site_info, by = join_by("Assemblage")) %>%
+  mutate(Order.q  = case_when(Order.q  == "0" ~ "(a)", # q=0 species richness
                               Order.q == "1" ~ "q = 1", # q=1 Shannon diversity
-                              Order.q == "2" ~ "q = 2")) %>% # q=2 Simpson diversity or evenness
+                              Order.q == "2" ~ "(b)")) %>% # q=2 Simpson diversity or evenness
   filter(!Order.q == "q = 1")
 
 df.point <-
@@ -87,11 +90,11 @@ df.line <-
 df.line$Method <- factor(df.line$Method,
                          c("Rarefaction", "Extrapolation"))
 
-# Plot----
+# Figure 3----
 Treatment_colors <- c("Control" = "#3b5d4d", "CPFA" = "#c5af99","CAFA" = "#ffd365")
 
 acc.curve <- ggplot(Site.hill.TD ,
-                aes(x = nt, y = qD,   color = Treatment)) +
+                aes(x = mT, y = qTD,   color = Treatment)) +
   facet_wrap( ~ Order.q) +
   geom_point(aes(),
              shape = 1,
@@ -113,7 +116,14 @@ acc.curve <- ggplot(Site.hill.TD ,
 
 acc.curve
 
-figure3 <- acc.curve +
+
+  p_with_subtitle <- ggdraw(acc.curve) +
+  draw_label("a", x = 0.05, y = 0.95, hjust = 0, vjust = 1, size = 12) +
+  draw_label("b", x = 0.52, y = 0.95, hjust = 0, vjust = 1, size = 12)
+
+  p_with_subtitle  
+  
+  acc.curve_1 <- acc.curve +
   scale_color_viridis(discrete = T, option = "D")  +
   scale_fill_viridis(discrete = T, option = "D")  +
   theme_bw(base_size = 14) + theme(
@@ -122,12 +132,21 @@ figure3 <- acc.curve +
     strip.background = element_rect(colour =
                                       "black", fill = "white"),
     # legend.position = c(x=1.32, y=.96),
-    legend.position = c(x=1.50, y=.96),
+    legend.position = c(x=1.50, y=.97),
     legend.justification = c('right', 'top'),
     legend.background = element_rect(fill = NA)
   ) +
-  guides(fill = 'none')
+  guides(fill = 'none')+ theme(strip.text.x = element_blank())+ # to remove the grey box
+  ggtitle('', subtitle = '(a)')+
+  theme(plot.subtitle = element_text(hjust = 1, vjust = 3))+
+  labs(title = '', subtitle = '') # to create space for a and b in the upcoming step.
 
+
+figure3 <- acc.curve_1+
+  theme(
+    strip.background.x = element_blank(), # to get rid of grey box with species names
+    strip.text.x = element_text(hjust = 0, size = 14)
+  )
 
 figure3
 

@@ -1,38 +1,20 @@
 source('00_seedling_data.R')
 
-# alpha diversity seedling----
-species.level_sd <- seedling.dat %>% # alpha_summary_sd, sd= seedling
-  filter(seedling>0) %>% 
-  group_by(site, Treatment, LUI, sci.name, adult) %>%
-  summarise(abundance= sum(seedling),.groups = 'drop') 
+# Question: 
+# How do seedling abundance and diversity vary across treatments and 
+# levels of land use intensity (LUI), both within and across sites?
 
-species.level_ad <- seedling.dat %>% # alpha_summary_sd, ad= adult trees
-  group_by(site, Treatment, LUI, sci.name) %>%
-  summarise(abundance= sum(adult),.groups = 'drop') 
-
-# data preparation for calculating alpha
+# data preparation for calculating N, S, Sn and ENSPIE (alpha scale)
 alpha_sum_sd <- seedling.dat %>%
-  filter(LUI < 1.20) %>%  #View() # filtered out high LUI
+  filter(LUI < 1.20) %>%  # filtered out high LUI
   group_by(site, Treatment, sci.name, village) %>%
-  # summarise(abundance= sum(adult),.groups = 'drop') %>% # abundance of adult trees
-  group_by(site, Treatment, village) %>%
-  summarise (Sp.adu = n_distinct(sci.name),
-             # number of unique species/richness
-             # Nu.adu = sum(abundance),
-             # total number of adult trees
-             .groups = "drop") %>% # add the total number of adults in each site
-  left_join(seedling.dat %>% select(!adult), multiple = "all") %>% 
-  group_by(site, Treatment, sci.name, LUI, 
-           # Sp.adu, 
-           # Nu.adu, 
-           village) %>%
+   group_by(site, Treatment, village) %>%
+  left_join(seedling.dat, multiple = "all") %>% 
+  group_by(site, Treatment, sci.name, LUI, village) %>%
   summarise(abundance= sum(seedling), .groups = 'drop') %>% # abundance of seedling
   filter(abundance>0) %>% 
   # calculate metrics for each site
-  group_by(site, Treatment, village, LUI, 
-           # Sp.adu, 
-           # Nu.adu
-           ) %>%
+  group_by(site, Treatment, village, LUI) %>%
   summarise (
     coverage = iNEXT.3D::DataInfo3D(abundance)$SC,
     S = n_distinct(sci.name),
@@ -50,20 +32,19 @@ alpha_sum_sd <- seedling.dat %>%
 
 # check are these data balanced? No, 22 sites in CAFA, 11 sites in CPFA and 11 sites in control.
 # with all LUIs, but with low and medium LUI it is only
-alpha_sum_sd %>% group_by(Treatment) %>% 
-  summarise(N_sites=n_distinct(site))
+alpha_sum_sd %>% group_by(Treatment) %>%
+  summarise(N_sites = n_distinct(site))
+# Control= 8, CPFA =10, CAFA = 17
 
 
 # individual based rarefaction before fitting models----
+# IBR is ideal for varying sampling efforts
 alpha_data_sd <- seedling.dat %>% # sd= seedling
-  select(-adu.stat) %>% 
   filter(seedling>0) %>%  # get rid of all sites with adults but 0 seedlings e.g.APA15_CPFA & APA19_CPFA
   group_by(site, Treatment, sci.name) %>%
   summarise(abundance= sum(seedling), .groups = 'drop') %>%
   inner_join(alpha_sum_sd %>% ungroup() %>% 
-               dplyr::select(site, LUI, 
-                             # Sp.adu, Nu.adu, 
-                             village,  minN),
+               dplyr::select(site, LUI, village,  minN),
              by = c('site')) %>% 
   # next for calculating Sn
   group_by(site, LUI) %>% 
@@ -80,12 +61,12 @@ alpha_sum_sd <- inner_join(alpha_sum_sd %>% ungroup(),
                            )
 # Models-----
 names(alpha_sum_sd)
-# number of individuals vs. Treatment, LUI and number of adult trees 
+# 1. Number of individuals in response to Treatment and LUI
 
 boxplot(N ~ site, data = alpha_sum_sd) # not using site as a random effect
 boxplot(N ~ village, data = alpha_sum_sd) # village as a random effect
-# N ~ Treatment * LUI----
-# N.alpha_sd <-
+
+# N.alpha <-
 #   brm(
 #     N ~ Treatment * LUI + (1|village),
 #     family = poisson(),
@@ -93,96 +74,90 @@ boxplot(N ~ village, data = alpha_sum_sd) # village as a random effect
 #     chains = 4,
 #     warmup = 1000,
 #     iter = 4000)
-# save(N.alpha_sd, file= 'N.alpha_sd.Rdata')
+# 
+# save(N.alpha, file= 'N.alpha.Rdata')
 
-load('N.alpha_sd.Rdata')
+load('N.alpha.Rdata')
 
-mcmc_plot(N.alpha_sd,
+mcmc_plot(N.alpha,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'red')
 
-mcmc_plot(N.alpha_sd, type= 'trace')
-mcmc_plot(N.alpha_sd, type= 'acf')
+mcmc_plot(N.alpha, type= 'trace')
+mcmc_plot(N.alpha, type= 'acf')
 
-pp_check(N.alpha_sd)
-
-plot.residuals <- cbind(alpha_sum_sd, residuals(N.alpha_sd))
-plot.residuals <- as.data.frame(plot.residuals)
-
-# plot residuals, Treatment
-plot.residuals %>% 
-  ggplot(aes(x= Treatment, y= Estimate))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-
-# plot residuals lui
-plot.residuals %>% 
-  ggplot(aes(x= LUI, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
+# pp_check
+color_scheme_set("darkgray")
+pp_check(N.alpha, ndraws = 30)+ # predicted vs. observed values
+  xlab( "Number of seedlings") + ylab("Density")+
+  theme_classic()+ 
+  theme(legend.position = 'none') # predicted vs. observed values
 
 
-summary(N.alpha_sd)
+summary(N.alpha)
 
-conditional_effects(N.alpha_sd)
+conditional_effects(N.alpha, effects = "LUI:Treatment")
 
-# S ~ Treatment * LUI----
-# number of species vs Treatment LUI
-# poisson error for species richness
+# expected decrease of seedlings
+N_bserved <- max(alpha_sum_sd$N)
+# Calculate e^(-2.27), estimate of TreatmentCAFA:LUI
+decrease <- exp(-2.27)
+# Calculate the percentage decrease
+(percentage_decrease <- 1 - decrease)
+
+# N_exptected= N_bserved*decrease
+(N_exptected <- N_bserved*decrease)
+
+# 2. Species Richness (S) Considering Treatment and Land Use Intensity (LUI)
+
 boxplot(S ~ village, data = alpha_sum_sd) # village as a random effect
 
-# S.alpha.rich_sd <-
+# S.alpha <-
 #   brm(
 #     S ~ Treatment * LUI + (1 | village),
-#     family = poisson(),
+#     family = poisson(), # poisson error for species richness
 #     data = alpha_sum_sd,
 #     chains = 4,
 #     warmup = 1000,
 #     iter = 4000
 #   )
-# save(S.alpha.rich_sd, file= 'S.alpha.rich_sd.Rdata')
+# save(S.alpha, file= 'S.alpha.Rdata')
 
-load('S.alpha.rich_sd.Rdata')
+load('S.alpha.Rdata')
 
-mcmc_plot(S.alpha.rich_sd,
+mcmc_plot(S.alpha,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'red')
 
-mcmc_plot(S.alpha.rich_sd, type= 'trace')
+mcmc_plot(S.alpha, type= 'trace')
 
-mcmc_plot(S.alpha.rich_sd, type= 'acf')
+mcmc_plot(S.alpha, type= 'acf')
 
-pp_check(S.alpha.rich_sd)
+# pp_check
+color_scheme_set("darkgray")
+pp_check(S.alpha, ndraws = 30)+ # predicted vs. observed values
+  xlab( "S") + ylab("Density")+
+  theme_classic()+ 
+  theme(legend.position = 'none') # predicted vs. observed values
 
-plot.residuals <- cbind(alpha_sum_sd, residuals(S.alpha.rich_sd) )
-plot.residuals <- as.data.frame(plot.residuals)
-# plot residuals Treatment
-plot.residuals %>% 
-  ggplot(aes(x= Treatment, y= Estimate))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-# plot residuals LUI
-plot.residuals %>% 
-  ggplot(aes(x= LUI, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
 
-summary(S.alpha.rich_sd)
+summary(S.alpha)
 
-conditional_effects(S.alpha.rich_sd)
+conditional_effects(S.alpha, effects = 'LUI:Treatment')
 
-# Sn ~ Treatment----
-# Rarefied richness vs Treatment, adult trees and LUI
-# lognormal for Sn
+# 3. Rarefied richness (Sn) Considering Treatment and Land Use Intensity (LUI)
+
 boxplot(Sn ~ village, data = alpha_sum_sd)
 
 alpha_sum_sd %>% 
   ggplot(aes(Sn))+
   geom_density()+
   geom_vline(aes(xintercept = mean(Sn)))+
-  xlim(0.5,3)
+  xlim(0.5,3) # right-skewed, lognormal for Sn
+
+summary(alpha_sum_sd$Sn)
 
 alpha_sum_sd %>% 
   ggplot(aes(y=Sn, x= Treatment))+
@@ -191,7 +166,7 @@ alpha_sum_sd %>%
                fun= mean,
                col= 'red')
   
-# Sn_alpha_sd <- brm(
+# Sn_alpha <- brm(
 #   Sn ~ Treatment * LUI + (1 | village),
 #   family = lognormal() ,
 #   data = alpha_sum_sd,
@@ -201,40 +176,30 @@ alpha_sum_sd %>%
 #   iter = 4000,
 #   # control = list(adapt_delta = 0.9)
 # )
-# save(Sn_alpha_sd, file='Sn_alpha_sd.Rdata')
+# save(Sn_alpha, file='Sn_alpha.Rdata')
 
-load('Sn_alpha_sd.Rdata')
+load('Sn_alpha.Rdata')
 
-mcmc_plot(Sn_alpha_sd,
+mcmc_plot(Sn_alpha,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'red')
 
-mcmc_plot(Sn_alpha_sd, type= 'trace')
-mcmc_plot(Sn_alpha_sd, type= 'acf')
+mcmc_plot(Sn_alpha, type= 'trace')
+mcmc_plot(Sn_alpha, type= 'acf')
 
-pp_check(Sn_alpha_sd)
+# pp_check
+color_scheme_set("darkgray")
+pp_check(Sn_alpha, ndraws = 30)+ # predicted vs. observed values
+  xlab(expression(S[n])) + ylab("Density")+
+  theme_classic()+ 
+  theme(legend.position = 'none') # predicted vs. observed values
 
-plot.residuals <- cbind(alpha_sum_sd, residuals(Sn_alpha_sd) )
-plot.residuals <- as.data.frame(plot.residuals)
+summary(Sn_alpha)
 
-# plot residuals Treatment
-plot.residuals %>% 
-  ggplot(aes(x= Treatment, y= Estimate))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
+conditional_effects(Sn_alpha, effects = 'LUI:Treatment')
 
-# plot residuals LUI
-plot.residuals %>% 
-  ggplot(aes(x= LUI, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-
-summary(Sn_alpha_sd)
-
-conditional_effects(Sn_alpha_sd)
-
-# ENSPIE ~ Treatment * LUI----
+# 4. Rarefied richness (Sn) Considering Treatment and Land Use Intensity (LUI)
 # lognormal for ENSPIE
 hist(alpha_sum_sd$ENSPIE)
 
@@ -259,7 +224,9 @@ alpha_sum_sd %>%
 boxplot(ENSPIE ~ site, data = alpha_sum_sd) # for random effect
 boxplot(ENSPIE ~ village, data = alpha_sum_sd) # for random effect
 
-# ENSPIE_alpha_sd <- brm(
+
+# equally abundant species in a perfectly even community (ENSPIE) Considering Treatment and Land Use Intensity (LUI)
+# ENSPIE_alpha <- brm(
 #   ENSPIE ~ Treatment * LUI + (1 | village),
 #   # family= Gamma(),
 #   family = lognormal(),
@@ -270,44 +237,53 @@ boxplot(ENSPIE ~ village, data = alpha_sum_sd) # for random effect
 #   iter = 4000,
 #   # control = list(adapt_delta = 0.9)
 # )
-# save(ENSPIE_alpha_sd, file = 'ENSPIE_alpha_sd.Rdata')
+# save(ENSPIE_alpha, file = 'ENSPIE_alpha.Rdata')
 
-load('ENSPIE_alpha_sd.Rdata')
+load('ENSPIE_alpha.Rdata')
 
-mcmc_plot(object = ENSPIE_alpha_sd, 
+mcmc_plot(object = ENSPIE_alpha, 
           type = 'areas', 
           prob= 0.95)+
   geom_vline(xintercept = 0, col= 'red')
 
-mcmc_plot(ENSPIE_alpha_sd, type= 'trace')
-mcmc_plot(ENSPIE_alpha_sd, type= 'acf')
-
-pp_check(ENSPIE_alpha_sd, ndraws = 30)
-
-# check model residual
-plot.residuals <- cbind(alpha_sum_sd, residuals(ENSPIE_alpha_sd))
-plot.residuals <- as.data.frame(plot.residuals)
-
-# plot residuals Treatment
-plot.residuals %>% 
-  ggplot(aes(x= Treatment, y= Estimate))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
-# plot residuals LUI
-plot.residuals %>% 
-  ggplot(aes(x= LUI, y= Estimate))+
-  geom_point()+
-  geom_hline(yintercept = 0, lty= 2, col= 'red')
+mcmc_plot(ENSPIE_alpha, type= 'trace')
+mcmc_plot(ENSPIE_alpha, type= 'acf')
 
 
-summary(ENSPIE_alpha_sd)
+# pp_check
+color_scheme_set("darkgray")
+pp_check(ENSPIE_alpha, ndraws = 30)+ # predicted vs. observed values
+  # xlab( "ENSPIE") + 
+ xlab(expression(ENS[PIE]))+
+  ylab("Density")+
+  theme_classic()+ 
+  theme(legend.position = 'none') # predicted vs. observed values
 
-conditional_effects(ENSPIE_alpha_sd)  # conditional effects
+summary(ENSPIE_alpha)
+
+conditional_effects(ENSPIE_alpha, effects= 'LUI:Treatment')  # conditional effects
+
+
+# load models----
+load(file='N.alpha.Rdata')
+load(file='S.alpha.Rdata')
+load(file='Sn_alpha.Rdata')
+load(file='ENSPIE_alpha.Rdata')
+
+# make df for figures----
+N.alpha.ce <- conditional_effects(N.alpha)
+N.alpha.df <- as.data.frame(N.alpha.ce$`LUI:Treatment`)
+
+S.alpha.ce <- conditional_effects(S.alpha)
+S.alpha.df <- as.data.frame(S.alpha.ce$`LUI:Treatment`)
+
+Sn_alpha.ce <- conditional_effects(Sn_alpha)
+Sn_alpha.df <- as.data.frame(Sn_alpha.ce$`LUI:Treatment`)
+
+ENSPIE_alpha.ce <- conditional_effects(ENSPIE_alpha)
+ENSPIE_alpha.df <- as.data.frame(ENSPIE_alpha.ce$`LUI:Treatment`)
 
 # plot----
-# ce= conditional effects of Treatment
-N.alpha_sd_ce_lui <- conditional_effects(N.alpha_sd, effects = 'LUI:Treatment')
-
 # N ~ Treatment * LUI
 N <- ggplot() +
   geom_point(
@@ -321,7 +297,7 @@ N <- ggplot() +
     position = position_jitter(width = 0.05, height = 0.45)
   ) +
   geom_line(
-    data = N.alpha_sd_ce_lui$LUI,
+    data = N.alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -333,7 +309,7 @@ N <- ggplot() +
     linewidth = 1
   ) +
   geom_ribbon(
-    data = N.alpha_sd_ce_lui$LUI,
+    data = N.alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -357,8 +333,6 @@ N <- ggplot() +
 
 N
 
-S.alpha.rich_sd_lui <- conditional_effects(S.alpha.rich_sd, effects = 'LUI:Treatment')
-
 # S ~ Treatment * LUI
 S <- ggplot() +
   geom_point(
@@ -372,7 +346,7 @@ S <- ggplot() +
     position = position_jitter(width = 0.05, height = 0.45)
   ) +
   geom_line(
-    data = S.alpha.rich_sd_lui$LUI,
+    data = S.alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -384,7 +358,7 @@ S <- ggplot() +
     linewidth = 1
   ) +
   geom_ribbon(
-    data = S.alpha.rich_sd_lui$LUI,
+    data = S.alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -408,8 +382,6 @@ S <- ggplot() +
 
 S
 
-Sn_alpha_sd_t_LUI <- conditional_effects(Sn_alpha_sd, effects = 'LUI:Treatment')
-
 # Sn ~ Treatment * LUI
 Sn <- ggplot() +
   geom_point(
@@ -423,7 +395,7 @@ Sn <- ggplot() +
     position = position_jitter(width = 0.05, height = 0.45)
   ) +
   geom_line(
-    data = Sn_alpha_sd_t_LUI$LUI,
+    data = Sn_alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -435,7 +407,7 @@ Sn <- ggplot() +
     linewidth = 1
   ) +
   geom_ribbon(
-    data = Sn_alpha_sd_t_LUI$LUI,
+    data = Sn_alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -460,8 +432,6 @@ Sn <- ggplot() +
 
 Sn
 
-ENSPIE_alpha_sd_t_LUI <- conditional_effects(ENSPIE_alpha_sd, effects = 'LUI:Treatment')
-
 # ENSPIE ~ Treatment * LUI
 ENSPIE <- ggplot() +
   geom_point(
@@ -475,7 +445,7 @@ ENSPIE <- ggplot() +
     position = position_jitter(width = 0.05, height = 0.45)
   ) +
   geom_line(
-    data = ENSPIE_alpha_sd_t_LUI$LUI,
+    data = ENSPIE_alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -487,7 +457,7 @@ ENSPIE <- ggplot() +
     linewidth = 1
   ) +
   geom_ribbon(
-    data = ENSPIE_alpha_sd_t_LUI$LUI,
+    data = ENSPIE_alpha.df,
     # conditional effect
     aes(
       x = LUI,
@@ -517,7 +487,7 @@ ENSPIE
 
 ENSPIE_legend <- ENSPIE + theme(legend.position="bottom")
 
-legendfig1 <- extract_legend(ENSPIE_legend)
+legendfig1 <- extract_legend(ENSPIE_legend) # extract_legend, a custom function
 
 figure2 <- (N|S)/(Sn|ENSPIE)/(legendfig1) + plot_layout(heights = c(10,10,2))
 
@@ -530,6 +500,3 @@ ggsave('figure2.jpg', figure2,
        width = 10,
        height = 6,
        dpi = 300)
-
-
-# end----

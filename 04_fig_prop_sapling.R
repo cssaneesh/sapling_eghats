@@ -3,97 +3,20 @@ source('00_sapling_data.R')
 names(sap_status)
 names(com.species)
 
-com.species %>% group_by(Treatment, sci.name) %>% 
+com.species %>% group_by(Treatment, Species) %>% 
   summarise(n()) # %>% View()
 
 com.species %>% group_by(Treatment) %>% 
   summarise(N_sites=n_distinct(site))
 
-# species vs browsing----
-# sp.browse <- brm(Browsing ~ sci.name+ (1|site), data= com.species,
-#                   family = bernoulli(link = "logit"),
-#                   chains = 4,
-#                   warmup = 1000,
-#                   iter = 4000,
-#                   thin = 1
-#                   )
-# save(sp.browse, file= 'sp.browse.Rdata')
+# figure 4----
 
-load(file= 'sp.browse.Rdata')
-pp_check(sp.browse)
-plot(sp.browse)
+# Modeling of disturbance probability in response to Treatment
 
-mcmc_plot(sp.browse, type= 'areas', prob= 0.95)+
-  geom_vline(xintercept = 0, col= 'grey')
+boxplot(Disturbance ~ site, data= sap_status) # site for random effect
 
-summary(sp.browse)
-conditional_effects(sp.browse)
-
-# tramp.browse----
-# tramp.browse <- brm(Trampling ~ sci.name+ (1|site), data= com.species,
-#                  family = bernoulli(link = "logit"),
-#                  chains = 4,
-#                  warmup = 1000,
-#                  iter = 4000,
-#                  thin = 1
-# )
-# save(tramp.browse, file= 'tramp.browse.Rdata')
-
-load(file= 'tramp.browse.Rdata')
-pp_check(tramp.browse)
-plot(tramp.browse)
-
-mcmc_plot(tramp.browse, type= 'areas', prob= 0.95)+
-  geom_vline(xintercept = 0, col= 'grey')
-
-summary(tramp.browse)
-conditional_effects(tramp.browse)
-
-# water.stress----
-names(com.sp)
-# water.stress <- brm(Wat.stress ~ sci.name+ (1|site), data= com.species,
-#                  family = bernoulli(link = "logit"),
-#                  chains = 4,
-#                  warmup = 1000,
-#                  iter = 4000,
-#                  thin = 1
-# )
-# save(water.stress, file= 'water.stress.Rdata')
-
-load(file= 'water.stress.Rdata')
-pp_check(water.stress)
-plot(water.stress)
-
-mcmc_plot(water.stress, type= 'areas', prob= 0.95)+
-  geom_vline(xintercept = 0, col= 'grey')
-
-summary(water.stress)
-conditional_effects(water.stress)
-
-# no.stress----
-names(com.sp)
-# no.stress.sp <- brm(None ~ sci.name+ (1|site), data= com.species,
-#                  family = bernoulli(link = "logit"),
-#                  chains = 4,
-#                  warmup = 1000,
-#                  iter = 5000,
-#                  thin = 1
-# )
-# save(no.stress.sp, file= 'no.stress.sp.Rdata')
-
-load(file= 'no.stress.sp.Rdata')
-pp_check(no.stress.sp)
-plot(no.stress.sp)
-
-mcmc_plot(no.stress.sp, type= 'areas', prob= 0.95)+
-  geom_vline(xintercept = 0, col= 'grey')
-
-summary(no.stress.sp)
-conditional_effects(no.stress.sp)
-
-# model without interaction with species----
-# sapstatus.no.dist <- brm(None ~ Treatment + (1|site),
-#                          data= com.species, # common species found all treatments with more than 5 indivisuals
+# dist.prob_treat <- brm(Disturbance ~ Treatment + (1|site), # dist.prob_treat=disturbance probability in response to Treatment
+#                          data= com.species, # common species found all treatments with more than 5 individuals
 #                          # data= sap_status, # all species
 #                  family = bernoulli(link = "logit"),
 #                  chains = 4,
@@ -102,80 +25,82 @@ conditional_effects(no.stress.sp)
 #                  thin = 1,
 #                  control = list(adapt_delta = 0.9) # divergent 5!
 #                  )
-# save(sapstatus.no.dist, file= 'sapstatus.no.dist.Rdata')
+# save(dist.prob_treat, file= 'dist.prob_treat.Rdata')
 
-load('sapstatus.no.dist.Rdata')
-pp_check(sapstatus.no.dist)
+load(file= 'dist.prob_treat.Rdata')
+
+# pp_check
+color_scheme_set("darkgray")
+pp_check(dist.prob_treat, ndraws = 30)+ # predicted vs. observed values
+  xlab( "Healthy saplings with no disturbances") + ylab("Density")+
+  theme_classic()+ 
+  theme(legend.position = 'none')
+  
 
 # Model convergence
-mcmc_plot(sapstatus.no.dist,
+mcmc_plot(dist.prob_treat,
           type = 'trace')
 
-mcmc_plot(sapstatus.no.dist,
+mcmc_plot(dist.prob_treat,
           type = "acf_bar")
 
-mcmc_plot(sapstatus.no.dist,
+mcmc_plot(dist.prob_treat,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'grey')
 
 
-summary(sapstatus.no.dist)
-conditional_effects(sapstatus.no.dist)
+summary(dist.prob_treat)
+conditional_effects(dist.prob_treat)
+
+# we found there is no difference in proportion of saplings being disturbed in treatments
+
+# # Modeling of disturbance probability in response to Species ----
+# dist.prob_sp <- brm(
+#     Disturbance ~ Species + (1 |site),
+#     # dist.prob_sp=disturbance probability in response to species
+#     data = com.species,
+#     family = bernoulli(link = "logit"),
+#     chains = 4,
+#     warmup = 1000,
+#     iter = 5000,
+#     thin = 1,
+#     control = list(adapt_delta = 0.9)
+#   )
+# 
+# save(dist.prob_sp, file= 'dist.prob_sp.Rdata')
+
+load(file= 'dist.prob_sp.Rdata')
+
+# pp_check
+color_scheme_set("darkgray")
+pp_check(dist.prob_sp, ndraws = 30)+ # predicted vs. observed values
+  xlab( "Healthy saplings species with no disturbances") + ylab("Density")+
+  theme_classic()+ 
+  theme(legend.position = 'none')
+
+# Model convergence
+mcmc_plot(dist.prob_sp,
+          type = 'trace')
+
+mcmc_plot(dist.prob_sp,
+          type = "acf_bar")
+
+mcmc_plot(dist.prob_sp,
+          type = "areas",
+          prob = 0.95) + # see if predictors CI contain zero.
+  geom_vline(xintercept = 0, col = 'grey')
+
+summary(dist.prob_sp)
+conditional_effects(dist.prob_sp)
 
 
-# plot----
-# model, ce, df, 
-load(file= 'sp.browse.Rdata')
-load(file= 'tramp.browse.Rdata')
-load(file= 'water.stress.Rdata')
-load(file= 'no.stress.Rdata')
-load(file= 'sapstatus.no.dist.Rdata')
+load(file= 'dist.prob_treat.Rdata')
+load(file= 'dist.prob_sp.Rdata')
 
-
-sp.browse.ce <- conditional_effects(sp.browse)
-sp.browse.df <- as.data.frame(sp.browse.ce$sci.name)
-
-tramp.browse.ce <- conditional_effects(tramp.browse)
-tramp.browse.df <- as.data.frame(tramp.browse.ce$sci.name)
-
-water.stress.ce <- conditional_effects(water.stress)
-water.stress.df <- as.data.frame(water.stress.ce$sci.name)
-
-no.stress.ce <- conditional_effects(no.stress)
-no.stress.df <- as.data.frame(no.stress.ce$sci.name)
-
-sapstatus.no.dist.ce <- conditional_effects(sapstatus.no.dist)
-sapstatus.no.dist.df <- as.data.frame(sapstatus.no.dist.ce$Treatment)
-
-# Convert log odds to probability sapstatus.no.dist----
-# Given log odds for Control, CPFA, and CAFA
-
-no.stress
-log_odds_Acaciachundra <- -2.08
-log_odds_Cassiafistula <- 0.59
-log_odds_Chloroxylonswietenia <- 1.17
-log_odds_Dalbergiapaniculata <- 0.21
-log_odds_Dolichandroneatrovirens <-  1.21
-log_odds_Wrightiatinctoria <- 0.41
-# Convert log odds to probability
-prob_Acaciachundra <- exp(log_odds_Acaciachundra) / (1 + exp(log_odds_Acaciachundra))*100
-prob_Cassiafistula <- exp(log_odds_Cassiafistula) / (1 + exp(log_odds_Cassiafistula))*100
-prob_Chloroxylonswietenia <- exp(log_odds_Chloroxylonswietenia) / (1 + exp(log_odds_Chloroxylonswietenia))*100
-prob_Dalbergiapaniculata <- exp(log_odds_Dalbergiapaniculata) / (1 + exp(log_odds_Dalbergiapaniculata))*100
-prob_Dolichandroneatrovirens <- exp(log_odds_Dolichandroneatrovirens) / (1 + exp(log_odds_Dolichandroneatrovirens))*100
-prob_Wrightiatinctoria <- exp(log_odds_Wrightiatinctoria) / (1 + exp(log_odds_Wrightiatinctoria))*100
-
-# prob_Acaciachundra= 11%
-# prob_Cassiafistula= 64%
-# prob_Chloroxylonswietenia= 76%
-# prob_Dalbergiapaniculata= 55%
-# prob_Dolichandroneatrovirens= 77%
-# prob_Wrightiatinctoria= 60% 
-
-# Given log odds for Control, CPFA, and CAFA
-# sapstatus.no.dist
-sapstatus.no.dist
+# Given log odds for Treatments
+# dist.prob_treat
+dist.prob_treat
 log_odds_control <- -0.79
 log_odds_cpfa <- -0.13
 log_odds_cafa <- -0.98
@@ -190,187 +115,55 @@ prob_cafa <- exp(log_odds_cafa) / (1 + exp(log_odds_cafa))*100
 # prob_cafa= 27.28
 
 
+# Given log odds for Species
+# dist.prob_sp
 
-fig.a <- ggplot() +
-  geom_point(
-    data = com.species,
-    # raw data
-    aes(x = sci.name, # predicting variable
-        y = None, # response variable
-        col = sci.name),
-    size = 1.5,
-    alpha = 0.5,
-    position = position_jitter(width = 0.05, height = 0.45)
-  ) +
-  geom_point(
-    data = sp.browse.df,
-    aes(x = sci.name, y = estimate__, colour = sci.name),
-    size = 3
-  ) +
-  geom_errorbar(
-    data = sp.browse.df,
-    aes(
-      x = sci.name,
-      ymin = lower__,
-      ymax = upper__,
-      colour = sci.name
-    ),
-    linewidth = 1.3,
-    width = 0.1
-  ) +
-  coord_flip()+
-  ylim(0,1)+
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position="none")+
-  labs(y= 'Browsed', x= ' '  , subtitle= 'a)')+
-  guides(fill= 'none')
+dist.prob_sp
+log_odds_Acaciachundra <- -2.10
+log_odds_Cassiafistula <- 0.55
+log_odds_Chloroxylonswietenia <- 1.44
+log_odds_Dalbergiapaniculata <- 0.41
+log_odds_Dolichandroneatrovirens <-  1.24
+log_odds_Wrightiatinctoria <- 0.43
+# Convert log odds to probability
+(prob_Acaciachundra <- exp(log_odds_Acaciachundra) / (1 + exp(log_odds_Acaciachundra))*100)
+prob_Cassiafistula <- exp(log_odds_Cassiafistula) / (1 + exp(log_odds_Cassiafistula))*100
+prob_Chloroxylonswietenia <- exp(log_odds_Chloroxylonswietenia) / (1 + exp(log_odds_Chloroxylonswietenia))*100
+prob_Dalbergiapaniculata <- exp(log_odds_Dalbergiapaniculata) / (1 + exp(log_odds_Dalbergiapaniculata))*100
+prob_Dolichandroneatrovirens <- exp(log_odds_Dolichandroneatrovirens) / (1 + exp(log_odds_Dolichandroneatrovirens))*100
+prob_Wrightiatinctoria <- exp(log_odds_Wrightiatinctoria) / (1 + exp(log_odds_Wrightiatinctoria))*100
 
-fig.a
-
-fig.b <- ggplot() +
-  geom_point(
-    data = com.species,
-    # raw data
-    aes(x = sci.name, # predicting variable
-        y = None, # response variable
-        col = sci.name),
-    size = 1.5,
-    alpha = 0.5,
-    position = position_jitter(width = 0.05, height = 0.45)
-  ) +
-  geom_point(
-    data = tramp.browse.df,
-    aes(x = sci.name, y = estimate__, colour = sci.name),
-    size = 3
-  ) +
-  geom_errorbar(
-    data = tramp.browse.df,
-    aes(
-      x = sci.name,
-      ymin = lower__,
-      ymax = upper__,
-      colour = sci.name
-    ),
-    linewidth = 1.3,
-    width = 0.1
-  ) +
-  coord_flip()+
-  ylim(0,1)+
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position="none")+
-  labs(y= 'Trampled', x= ' '  , subtitle= 'b)')+
-  guides(fill= 'none')
-
-fig.b
-
-fig.c <- ggplot() +
-  geom_point(
-    data = com.species,
-    # raw data
-    aes(x = sci.name, # predicting variable
-        y = None, # response variable
-        col = sci.name),
-    size = 1.5,
-    alpha = 0.5,
-    position = position_jitter(width = 0.05, height = 0.45)
-  ) +
-  geom_point(
-    data = water.stress.df,
-    aes(x = sci.name, y = estimate__, colour = sci.name),
-    size = 3
-  ) +
-  geom_errorbar(
-    data = water.stress.df,
-    aes(
-      x = sci.name,
-      ymin = lower__,
-      ymax = upper__,
-      colour = sci.name
-    ),
-    linewidth = 1.3,
-    width = 0.1
-  ) +
-  coord_flip()+
-  ylim(0,1)+
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position="none")+
-  labs(y= 'Water stress', x= ' '  , subtitle= 'c)')+
-  guides(fill= 'none')
-
-fig.c
-
-fig.d <- ggplot() +
-  geom_point(
-    data = com.species,
-    # raw data
-    aes(x = sci.name, # predicting variable
-        y = None, # response variable
-        col = sci.name),
-    size = 1.5,
-    alpha = 0.5,
-    position = position_jitter(width = 0.05, height = 0.45)
-  ) +
-  geom_point(
-    data = no.stress.df,
-    aes(x = sci.name, y = estimate__, colour = sci.name),
-    size = 3
-  ) +
-  geom_errorbar(
-    data = no.stress.df,
-    aes(
-      x = sci.name,
-      ymin = lower__,
-      ymax = upper__,
-      colour = sci.name
-    ),
-    linewidth = 1.3,
-    width = 0.1
-  ) +
-  # coord_cartesian(xlim = c(0, 1), ) + 
-  coord_flip()+
-  ylim(0, 1)+
-  scale_color_viridis(discrete = T, option="D")  + 
-  scale_fill_viridis(discrete = T, option="D")  + 
-  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position="none")+
-  labs(x= 'No stress', y= ' '  , subtitle= 'd)')+
-  guides(fill= 'none')
-
-fig.d
+# prob_Acaciachundra= 11%
+# prob_Cassiafistula= 63%
+# prob_Chloroxylonswietenia= 80%
+# prob_Dalbergiapaniculata= 60%
+# prob_Dolichandroneatrovirens= 77%
+# prob_Wrightiatinctoria= 60% 
 
 
-fig.a
-fig.b
-fig.c
-fig.d
+# make df for figures
 
-fig.abcd <- (fig.a|fig.b)/(fig.c|fig.d)
-fig.abcd
+dist.prob_treat.ce <- conditional_effects(dist.prob_treat)
+dist.prob_treat.df <- as.data.frame(dist.prob_treat.ce$Treatment)
 
-no.stress.prop <- ggplot() +
+prop_treat <- ggplot() +
   geom_point(
     data = sap_status,
     # raw data
     aes(x = Treatment, # predicting variable
-        y = None, # response variable
+        y = Disturbance, # response variable
         col = Treatment),
     size = 1.5,
     alpha = 0.3,
     position = position_jitter(width = 0.05, height = 0.45)
   ) +
   geom_point(
-    data = sapstatus.no.dist.df,
+    data = dist.prob_treat.df,
     aes(x = Treatment, y = estimate__, colour = Treatment),
     size = 3
   ) +
   geom_errorbar(
-    data = sapstatus.no.dist.df,
+    data = dist.prob_treat.df,
     aes(
       x = Treatment,
       ymin = lower__,
@@ -385,42 +178,46 @@ no.stress.prop <- ggplot() +
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(y= '% of tree saplings with \n no stress and disturbance'  , subtitle= '(a)')+
+  labs(y= 'Proportion of undisturbed saplings per site', subtitle= '(a)')+
   guides(fill= 'none')
 
 
-no.stress.prop
+prop_treat
 
-no.stress.df %>% summarise(mean(estimate__))
+# make df for figures
+dist.prob_sp.ce <- conditional_effects(dist.prob_sp)
+dist.prob_sp.df <- as.data.frame(dist.prob_sp.ce$Species)
 
-no.stress.sp <- ggplot() +
+dist.prob_treat.df %>% summarise(mean(estimate__)) # for hline
+
+prop_sp <- ggplot() +
   geom_point(
     data = com.species,
     # raw data
-    aes(x = sci.name, # predicting variable
-        y = None, # response variable
-        col = sci.name),
+    aes(x = Species, # predicting variable
+        y = Disturbance, # response variable
+        col = Species),
     size = 1.5,
     alpha = 0.3,
     position = position_jitter(width = 0.05, height = 0.45)
   ) +
   geom_point(
-    data = no.stress.df,
-    aes(x = sci.name, y = estimate__, colour = sci.name),
+    data = dist.prob_sp.df,
+    aes(x = Species, y = estimate__, colour = Species),
     size = 3
   ) +
   geom_errorbar(
-    data = no.stress.df,
+    data = dist.prob_sp.df,
     aes(
-      x = sci.name,
+      x = Species,
       ymin = lower__,
       ymax = upper__,
-      colour = sci.name
+      colour = Species
     ),
     linewidth = 1.3,
     width = 0.1
   ) +
-  geom_hline(yintercept = 0.19, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # mean(estimate__)= 0.19
+  geom_hline(yintercept = 0.24, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # mean(estimate__)= 0.19
   # coord_cartesian(xlim = c(0, 1), ) + 
   coord_flip()+
   ylim(0, 1)+ 
@@ -431,10 +228,11 @@ no.stress.sp <- ggplot() +
   labs(x= 'Species', y= 'Probability of remaining undisturbed'  , subtitle= '(b)')+
   guides(fill= 'none')
 
-no.stress.sp
+prop_sp
 
-figure4 <- (no.stress.prop|no.stress.sp)
+figure4 <- (prop_treat | prop_sp)
 figure4
+
 save(figure4, file= 'figure4.Rdata')
 
 load(file= 'figure4.Rdata')
