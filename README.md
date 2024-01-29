@@ -1,7 +1,8 @@
 # Promoting tree diversity and growth rates by reducing disturbances.   [![DOI](https://zenodo.org/badge/12345.svg)](https://zenodo.org/badge/latestdoi/12345)
 
 Saneesh Cherapurath Soman, Emma Ladouceur, Tiffany M. Knight (20xx) Promoting tree diversity and growth rates by reducing disturbances.
-Journal of Ecologixxx Aplxxxx. Article DOI: [12345](https://doi.org/1234) Data and code DOI: [12345](https://zenodo.org/account/settings/github/repository/cssaneesh/sapling_eghats)
+Journal of Ecologixxx Aplxxxx. Article DOI: [12345](https://doi.org/1234) Data and code DOI: [10.5281/zenodo.10580251
+](https://zenodo.org/uploads/10580251)
 
 
 _Find below the description of the data and scripts used in this study_
