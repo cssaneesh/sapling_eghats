@@ -36,7 +36,6 @@ pp_check(dist.prob_treat, ndraws = 30)+ # predicted vs. observed values
   theme_classic()+ 
   theme(legend.position = 'none')
   
-
 # Model convergence
 mcmc_plot(dist.prob_treat,
           type = 'trace')
@@ -48,7 +47,6 @@ mcmc_plot(dist.prob_treat,
           type = "areas",
           prob = 0.95) + # see if predictors CI contain zero.
   geom_vline(xintercept = 0, col = 'grey')
-
 
 summary(dist.prob_treat)
 conditional_effects(dist.prob_treat)
@@ -142,6 +140,8 @@ prob_Wrightiatinctoria <- exp(log_odds_Wrightiatinctoria) / (1 + exp(log_odds_Wr
 
 
 # make df for figures
+# load(file= 'dist.prob_treat.Rdata')
+# load(file= 'dist.prob_sp.Rdata')
 
 dist.prob_treat.ce <- conditional_effects(dist.prob_treat)
 dist.prob_treat.df <- as.data.frame(dist.prob_treat.ce$Treatment)
@@ -187,8 +187,8 @@ prop_treat
 # make df for figures
 dist.prob_sp.ce <- conditional_effects(dist.prob_sp)
 dist.prob_sp.df <- as.data.frame(dist.prob_sp.ce$Species)
-
-dist.prob_treat.df %>% summarise(mean(estimate__)) # for hline
+fitted_values1 <- fitted(dist.prob_sp)
+average_effect1 <- mean(fitted_values1) # 0.21, for hline
 
 prop_sp <- ggplot() +
   geom_point(
@@ -217,7 +217,7 @@ prop_sp <- ggplot() +
     linewidth = 1.3,
     width = 0.1
   ) +
-  geom_hline(yintercept = 0.24, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # mean(estimate__)= 0.19
+  geom_hline(yintercept = average_effect1, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # mean(estimate__)= 0.19
   # coord_cartesian(xlim = c(0, 1), ) + 
   coord_flip()+
   ylim(0, 1)+ 

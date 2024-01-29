@@ -9,7 +9,6 @@ rgr_com.species %>% group_by(Treatment) %>% distinct(site) %>% summarise(sites=n
 
 boxplot(rgr_rcd ~ site, data = rgr_com.species) # using site as a random effect
 
-
 # rgr.RCD_treat <- brm(rgr_rcd ~ Treatment + (1|site), data= rgr_com.species,
 #                  family = student(),
 #                  chains = 4,
@@ -134,12 +133,16 @@ rgr.RCD_treat.df <- as.data.frame(rgr.RCD_treat.ce$Treatment)
 
 rgr.RCD_sp.ce <- conditional_effects(rgr.RCD_sp)
 rgr.RCD_sp.df <- as.data.frame(rgr.RCD_sp.ce$Species)
+fitted_values2 <- fitted(rgr.RCD_sp)
+average_effect2 <- mean(fitted_values2) # 0.62, for hline fig 5b
 
 rgr.H_treat.ce <- conditional_effects(rgr.H_treat)
 rgr.H_treat.df <- as.data.frame(rgr.H_treat.ce$Treatment)
 
 rgr.H_sp.ce <- conditional_effects(rgr.H_sp)
 rgr.H_sp.df <- as.data.frame(rgr.H_sp.ce$Species)
+fitted_values3 <- fitted(rgr.H_sp)
+average_effect3 <- mean(fitted_values3) # 0.55, for hline for fig 5d
 
 
 # Final fig 5----
@@ -173,8 +176,6 @@ rgrrcd.a
 
 # fig 5b
 
-rgr.RCD_sp.df %>% summarise(mean(estimate__)) # for vertical line
-
 rgrrcd.b.sp <- ggplot(data = rgr.RCD_sp.df,
                        aes(y = Species,
                            x = estimate__,
@@ -192,7 +193,7 @@ rgrrcd.b.sp <- ggplot(data = rgr.RCD_sp.df,
     linewidth = 0.9,
     width = 0.1
   ) + 
-  geom_vline(xintercept = 0.70, col= 'black', linetype= 'dashed', alpha= 0.8, linewidth= 0.8)+ # 0.70 is overall mean growth
+  geom_vline(xintercept = average_effect2, col= 'black', linetype= 'dashed', alpha= 0.8, linewidth= 0.8)+ # 0.70 is overall mean growth
   labs(x= 'Relative Growth: Root Collar Diameter', y= "Species", subtitle= '(b)')+
   theme(legend.position = 'none')+
   # scale_color_viridis(discrete = T, option="D")  + 
@@ -229,10 +230,7 @@ rgrh.c <- ggplot(data = rgr.H_treat.df,
 
 rgrh.c
 
-
 # fig 5d
-rgr.H_sp.df %>% summarise(mean(estimate__)) # for vertical line
-
 rgrh.d.sp <- ggplot(data = rgr.H_sp.df,
                      aes(y = Species,
                          x = estimate__,
@@ -250,7 +248,7 @@ rgrh.d.sp <- ggplot(data = rgr.H_sp.df,
     linewidth = 0.9,
     width = 0.1
   ) +
-  geom_vline(xintercept = 0.70, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # 0.7056 is overall mean growth
+  geom_vline(xintercept = average_effect3, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # 0.7056 is overall mean growth
   labs(x= 'Relative Growth: Height', y= "Species", subtitle= '(d)')+
   theme(legend.position = 'none')+
   # scale_color_viridis(discrete = T, option="D")  + 
