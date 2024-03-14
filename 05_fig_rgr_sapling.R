@@ -9,12 +9,14 @@ rgr_com.species %>% group_by(Treatment) %>% distinct(site) %>% summarise(sites=n
 
 boxplot(rgr_rcd ~ site, data = rgr_com.species) # using site as a random effect
 
-# rgr.RCD_treat <- brm(rgr_rcd ~ Treatment + (1|site), data= rgr_com.species,
+# rgr.RCD_treat <- brm(rgr_rcd ~ Treatment + (1|Species), 
+#                      data= rgr_com.species,
 #                  family = student(),
 #                  chains = 4,
 #                  warmup = 1000,
 #                  iter = 5000,
-#                  thin = 1
+#                  thin = 1,
+#                 control = list(adapt_delta = 0.99)
 #                  )
 # save(rgr.RCD_treat, file= 'rgr.RCD_treat.Rdata')
 
@@ -65,12 +67,14 @@ summary(rgr.RCD_sp)
 conditional_effects(rgr.RCD_sp)
 
 # 3. Modeling relative growth in height for treatment effects across sites
-# rgr.H_treat <- brm(rgrH ~ Treatment + (1|site), data= rgr_com.species,
+# rgr.H_treat <- brm(rgrH ~ Treatment + (1|Species), 
+#                    data= rgr_com.species,
 #                     family = student(),
 #                     chains = 4,
 #                     warmup = 1000,
-#                     iter = 4000,
-#                     thin = 1
+#                     iter = 5000,
+#                     thin = 1,
+#                    control = list(adapt_delta = 0.999)
 # )
 # save(rgr.H_treat, file= 'rgr.H_treat.Rdata')
 
@@ -84,7 +88,8 @@ pp_check(rgr.H_treat, ndraws = 30)+ # predicted vs. observed values
   theme(legend.position = 'none') 
 
 mcmc_plot(rgr.H_treat, type= 'areas', prob= 0.95)+
-  geom_vline(xintercept = 0, col= 'red')
+  geom_vline(xintercept = 0, col= 'red')+
+  xlim(-2.5, 2.5)
 
 mcmc_plot(rgr.H_treat, type= 'trace')
 mcmc_plot(rgr.H_treat, type= 'acf')

@@ -18,6 +18,8 @@ library(plotly)
 library(gridExtra)
 library(cowplot)
 library(bayesplot)
+library(broom.mixed)
+
 
 # seedling data----
 seedling.dat <- read.csv(file = 'seedling.dat.csv')
@@ -40,6 +42,9 @@ seedling.dat %>%
   group_by(Treatment, village) %>%
   distinct(Treatment) %>% group_by(Treatment) %>%
   count(Treatment, name = 'sites')
+
+seedling.dat %>% 
+  filter(LUI <= 0.60) %>% view()
 
 
 # Functions----

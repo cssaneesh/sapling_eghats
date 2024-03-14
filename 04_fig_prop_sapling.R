@@ -13,9 +13,7 @@ com.species %>% group_by(Treatment) %>%
 
 # Modeling of disturbance probability in response to Treatment
 
-boxplot(Disturbance ~ site, data= sap_status) # site for random effect
-
-# dist.prob_treat <- brm(Disturbance ~ Treatment + (1|site), # dist.prob_treat=disturbance probability in response to Treatment
+# dist.prob_treat <- brm(Disturbance ~ Treatment + (1|Species), # dist.prob_treat=disturbance probability in response to Treatment
 #                          data= com.species, # common species found all treatments with more than 5 individuals
 #                          # data= sap_status, # all species
 #                  family = bernoulli(link = "logit"),
@@ -23,7 +21,7 @@ boxplot(Disturbance ~ site, data= sap_status) # site for random effect
 #                  warmup = 1000,
 #                  iter = 4000,
 #                  thin = 1,
-#                  control = list(adapt_delta = 0.9) # divergent 5!
+#                  control = list(adapt_delta = 0.99) # divergent 5 at 0.9!
 #                  )
 # save(dist.prob_treat, file= 'dist.prob_treat.Rdata')
 
@@ -51,9 +49,14 @@ mcmc_plot(dist.prob_treat,
 summary(dist.prob_treat)
 conditional_effects(dist.prob_treat)
 
+
+fixef(dist.prob_treat)
+ranef(dist.prob_treat) # for plot
+coef(dist.prob_treat)
+
 # we found there is no difference in proportion of saplings being disturbed in treatments
 
-# # Modeling of disturbance probability in response to Species ----
+# Modeling of disturbance probability in response to Species ----
 # dist.prob_sp <- brm(
 #     Disturbance ~ Species + (1 |site),
 #     # dist.prob_sp=disturbance probability in response to species
@@ -65,7 +68,7 @@ conditional_effects(dist.prob_treat)
 #     thin = 1,
 #     control = list(adapt_delta = 0.9)
 #   )
-# 
+
 # save(dist.prob_sp, file= 'dist.prob_sp.Rdata')
 
 load(file= 'dist.prob_sp.Rdata')
@@ -98,46 +101,24 @@ load(file= 'dist.prob_sp.Rdata')
 
 # Given log odds for Treatments
 # dist.prob_treat
-dist.prob_treat
-log_odds_control <- -0.79
-log_odds_cpfa <- -0.13
-log_odds_cafa <- -0.98
-
-# Convert log odds to probability
-prob_control <- exp(log_odds_control) / (1 + exp(log_odds_control))*100
-prob_cpfa <- exp(log_odds_cpfa) / (1 + exp(log_odds_cpfa))*100
-prob_cafa <- exp(log_odds_cafa) / (1 + exp(log_odds_cafa))*100
-
-# prob_control= 31.21
-# prob_cpfa= 46.75
-# prob_cafa= 27.28
+library(broom.mixed)
+df <- as.data.frame(tidy(dist.prob_treat))
+df %>% 
+  mutate(estimate = exp(estimate) / (1 + exp(estimate))*100) %>% 
+  mutate(probability= round(estimate)) %>% 
+  select(effect, probability) %>% 
+  filter(effect== 'fixed')
 
 
 # Given log odds for Species
 # dist.prob_sp
 
-dist.prob_sp
-log_odds_Acaciachundra <- -2.10
-log_odds_Cassiafistula <- 0.55
-log_odds_Chloroxylonswietenia <- 1.44
-log_odds_Dalbergiapaniculata <- 0.41
-log_odds_Dolichandroneatrovirens <-  1.24
-log_odds_Wrightiatinctoria <- 0.43
-# Convert log odds to probability
-(prob_Acaciachundra <- exp(log_odds_Acaciachundra) / (1 + exp(log_odds_Acaciachundra))*100)
-prob_Cassiafistula <- exp(log_odds_Cassiafistula) / (1 + exp(log_odds_Cassiafistula))*100
-prob_Chloroxylonswietenia <- exp(log_odds_Chloroxylonswietenia) / (1 + exp(log_odds_Chloroxylonswietenia))*100
-prob_Dalbergiapaniculata <- exp(log_odds_Dalbergiapaniculata) / (1 + exp(log_odds_Dalbergiapaniculata))*100
-prob_Dolichandroneatrovirens <- exp(log_odds_Dolichandroneatrovirens) / (1 + exp(log_odds_Dolichandroneatrovirens))*100
-prob_Wrightiatinctoria <- exp(log_odds_Wrightiatinctoria) / (1 + exp(log_odds_Wrightiatinctoria))*100
-
-# prob_Acaciachundra= 11%
-# prob_Cassiafistula= 63%
-# prob_Chloroxylonswietenia= 80%
-# prob_Dalbergiapaniculata= 60%
-# prob_Dolichandroneatrovirens= 77%
-# prob_Wrightiatinctoria= 60% 
-
+df1 <- as.data.frame(tidy(dist.prob_sp))
+df1 %>% 
+  mutate(estimate = exp(estimate) / (1 + exp(estimate))*100) %>% 
+  mutate(probability= round(estimate, 0)) %>% 
+  select(effect, probability) %>% 
+  filter(effect== 'fixed')
 
 # make df for figures
 # load(file= 'dist.prob_treat.Rdata')
@@ -145,6 +126,7 @@ prob_Wrightiatinctoria <- exp(log_odds_Wrightiatinctoria) / (1 + exp(log_odds_Wr
 
 dist.prob_treat.ce <- conditional_effects(dist.prob_treat)
 dist.prob_treat.df <- as.data.frame(dist.prob_treat.ce$Treatment)
+
 
 prop_treat <- ggplot() +
   geom_point(
@@ -225,7 +207,7 @@ prop_sp <- ggplot() +
   # scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(x= 'Species', y= 'Probability of remaining undisturbed'  , subtitle= '(b)')+
+  labs(x= 'Species', y= 'Proportion of undisturbed \nsaplings for each species'  , subtitle= '(b)')+
   guides(fill= 'none')
 
 prop_sp
