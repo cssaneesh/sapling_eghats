@@ -1,13 +1,14 @@
 # Promoting tree diversity and growth rates by reducing disturbances.   [![DOI](https://zenodo.org/badge/12345.svg)](https://zenodo.org/badge/latestdoi/12345)
 
 Saneesh Cherapurath Soman, Emma Ladouceur, Tiffany M. Knight (20xx) Promoting tree diversity and growth rates by reducing disturbances.
-Journal of Ecologixxx Aplxxxx. Article DOI: [12345](https://doi.org/1234) & Data DOI: [12345](https://doi.org/12345)  
+Journal of Ecologixxx Aplxxxx. Article DOI: [12345](https://doi.org/1234) Data and code DOI: [10.5281/zenodo.10580251
+](https://zenodo.org/uploads/10580251)
 
 
 _Find below the description of the data and scripts used in this study_
 
 ## Data
-1. `seedling.dat.csv` encompasses information related to seedlings in various sites. This data set is used in _Script1_ and _Script2_. The data set includes the following columns:
+1. `seedling.dat.csv` encompasses information related to seedlings in various sites. This data set is used for _Q1_ and _Q2_. The data set includes the following columns:
 
       1. **Treatment:** The type of treatment applied.
       2. **Village:** The specific village where the observation was made.
@@ -18,7 +19,7 @@ _Find below the description of the data and scripts used in this study_
     7. **Goat:** Relative number of goats to a site.
     8. **Trenches:** Relative area of trenches to a site.
   
-2. `rgr.csv` encompasses information related  to sapling's relative Growth and Health. This data set is used in _Script3_ and _Script4_.The data set includes the following columns:
+2. `rgr.csv` encompasses information related  to sapling's relative Growth and Health. This data set is used for _Q3_ and _Q4_.The data set includes the following columns:
 
     1. **Treatment:** The type of treatment applied to the saplings.
     2. **Village:** The village where the observations were recorded.
