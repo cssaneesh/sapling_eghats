@@ -137,7 +137,10 @@ rgr.RCD_treat.ce <- conditional_effects(rgr.RCD_treat)
 rgr.RCD_treat.df <- as.data.frame(rgr.RCD_treat.ce$Treatment)
 
 rgr.RCD_sp.ce <- conditional_effects(rgr.RCD_sp)
-rgr.RCD_sp.df <- as.data.frame(rgr.RCD_sp.ce$Species)
+rgr.RCD_sp.df <- as.data.frame(rgr.RCD_sp.ce$Species) %>% select(Species,
+                                                                 estimate__,
+                                                                 lower__, 
+                                                                 upper__)
 fitted_values2 <- fitted(rgr.RCD_sp)
 average_effect2 <- mean(fitted_values2) # 0.62, for hline fig 5b
 
@@ -145,30 +148,42 @@ rgr.H_treat.ce <- conditional_effects(rgr.H_treat)
 rgr.H_treat.df <- as.data.frame(rgr.H_treat.ce$Treatment)
 
 rgr.H_sp.ce <- conditional_effects(rgr.H_sp)
-rgr.H_sp.df <- as.data.frame(rgr.H_sp.ce$Species)
+rgr.H_sp.df <- as.data.frame(rgr.H_sp.ce$Species)%>% select(Species,
+                                                            estimate__,
+                                                            lower__, 
+                                                            upper__)
 fitted_values3 <- fitted(rgr.H_sp)
 average_effect3 <- mean(fitted_values3) # 0.55, for hline for fig 5d
 
 
 # Final fig 5----
 # fig 5a 
-rgrrcd.a <- ggplot(data = rgr.RCD_treat.df,
-                          aes(x = Treatment,
-                              y = estimate__,
-                              colour = Treatment)) +
-  geom_point(size = 4, position = position_dodge(width = 0.5)) +
-  geom_errorbar(
+rgrrcd.a <- ggplot()+ 
+  geom_point(data = rgr_com.species,
+             aes(x= Treatment,
+                 y= rgr_rcd,
+                 col = Treatment),
+             size = 1.5,
+             alpha = 0.3,
+             position = position_jitter(width = 0.05, height = 0.45))+
+  geom_point(data = rgr.RCD_treat.df,
+             aes(x = Treatment,
+                 y = estimate__,
+                 colour = Treatment),
+             size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(data = rgr.RCD_treat.df,
     aes(
-      # x = Treatment,
+      x = Treatment,
       ymin = lower__,
       ymax = upper__,
       # group = Treatment,
-      # colour = Species
+      colour = Treatment
     ),
     # position = position_dodge(width = 0.5),
-    linewidth = 0.9,
-    width = 0.1
+    linewidth = 1.3,
+    width = 0.2
   ) +
+  ylim(0,1.5)+
   labs(y= 'Relative Growth: \n Root Collar Diameter', subtitle= '(a)') + 
   scale_color_viridis(discrete = T, option="D")  + 
   scale_fill_viridis(discrete = T, option="D")  + 
@@ -180,24 +195,32 @@ rgrrcd.a <- ggplot(data = rgr.RCD_treat.df,
 rgrrcd.a
 
 # fig 5b
-
-rgrrcd.b.sp <- ggplot(data = rgr.RCD_sp.df,
+rgrrcd.b.sp <-ggplot()+
+  geom_point(data = rgr_com.species,
+             aes(y= Species,
+                 x= rgr_rcd,
+                 col = Species),
+             size = 1.5,
+             alpha = 0.3,
+             position = position_jitter(width = 0.35, height = 0.35)) +
+  geom_point(data = rgr.RCD_sp.df,
                        aes(y = Species,
                            x = estimate__,
-                           colour = Species)) +
-  geom_point(size = 4, position = position_dodge(width = 0.5)) +
-  geom_errorbar(
+                           colour = Species),
+             size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(data = rgr.RCD_sp.df,
     aes(
-      # x = Treatment,
+      y = Species,
       xmin = lower__,
       xmax = upper__,
       # group = Treatment,
-      # colour = Species
+      colour = Species
     ),
     # position = position_dodge(width = 0.5),
-    linewidth = 0.9,
-    width = 0.1
+    linewidth = 1.3,
+    width = 0.3
   ) + 
+    xlim(0, 1.5)+
   geom_vline(xintercept = average_effect2, col= 'black', linetype= 'dashed', alpha= 0.8, linewidth= 0.8)+ # 0.70 is overall mean growth
   labs(x= 'Relative Growth: Root Collar Diameter', y= "Species", subtitle= '(b)')+
   theme(legend.position = 'none')+
@@ -211,23 +234,31 @@ rgrrcd.b.sp
 
 # fig 5c
 
-rgrh.c <- ggplot(data = rgr.H_treat.df,
-                        aes(x = Treatment,
-                            y = estimate__,
-                            colour = Treatment)) +
-  geom_point(size = 4, position = position_dodge(width = 0.5)) +
-  geom_errorbar(
+rgrh.c <- ggplot()+ 
+  geom_point(data = rgr_com.species,
+             aes(x= Treatment,
+                 y= rgrH,
+                 col = Treatment),
+             size = 1.5,
+             alpha = 0.3,
+             position = position_jitter(width = 0.05, height = 0.45))+
+  geom_point(data = rgr.H_treat.df,
+             aes(x = Treatment,
+                                       y = estimate__,
+                                       colour = Treatment),
+             size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(data = rgr.H_treat.df,
     aes(
-      # x = Treatment,
+      x = Treatment,
       ymin = lower__,
       ymax = upper__,
-      # group = Treatment,
-      # colour = Species
+      colour = Treatment
     ),
     # position = position_dodge(width = 0.5),
-    linewidth = 0.9,
-    width = 0.1
+    linewidth = 1.3,
+    width = 0.2
   ) +
+  ylim(0, 1.5)+
   labs(y= 'Relative Growth: \n Height', subtitle= '(c)')+scale_color_viridis(discrete = T, option="D")  + 
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
@@ -236,28 +267,34 @@ rgrh.c <- ggplot(data = rgr.H_treat.df,
 rgrh.c
 
 # fig 5d
-rgrh.d.sp <- ggplot(data = rgr.H_sp.df,
-                     aes(y = Species,
-                         x = estimate__,
-                         colour = Species)) +
-  geom_point(size = 4, position = position_dodge(width = 0.5)) +
-  geom_errorbar(
+rgrh.d.sp <- ggplot()+
+  geom_point(data = rgr_com.species,
+             aes(y= Species,
+                 x= rgrH,
+                 col = Species),
+             size = 1.5,
+             alpha = 0.3,
+             position = position_jitter(width = 0.35, height = 0.35))+
+  geom_point(data = rgr.H_sp.df,
+             aes(y = Species,
+                 x = estimate__,
+                 colour = Species),
+             size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(data = rgr.H_sp.df,
     aes(
-      # x = Treatment,
+      y = Species,
       xmin = lower__,
       xmax = upper__,
       # group = Treatment,
-      # colour = Species
+      colour = Species
     ),
-    # position = position_dodge(width = 0.5),
-    linewidth = 0.9,
-    width = 0.1
+    linewidth = 1.3,
+    width = 0.3
   ) +
+  xlim(0, 1.5)+
   geom_vline(xintercept = average_effect3, linetype= 'dashed', col= 'black', alpha= 0.8, linewidth= 0.8)+ # 0.7056 is overall mean growth
   labs(x= 'Relative Growth: Height', y= "Species", subtitle= '(d)')+
   theme(legend.position = 'none')+
-  # scale_color_viridis(discrete = T, option="D")  + 
-  # scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")
 

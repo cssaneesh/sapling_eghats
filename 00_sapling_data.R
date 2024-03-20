@@ -38,10 +38,11 @@ sap_status <- rgr %>%
     Browsing = if_else(disturbance == 'browsed', 1, 0),        # 1 if browsed, 0 otherwise
     Trampling = if_else(disturbance == 'trampled', 1, 0),      # 1 if trampled, 0 otherwise
     Wat.stress = if_else(disturbance == 'partly_dried', 1, 0), # 1 if partly dried (water stress), 0 otherwise
-    Disturbance = if_else(disturbance == 'none', 0, 1)          # 0 if no disturbance, 1 otherwise
-  ) %>% mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
+    Disturbance = if_else(disturbance == 'none', 0, 1)) %>%           # 0 if no disturbance, 1 otherwise
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) 
 # :) reorder the levels of the 'Treatment' factor variable to Control, CPFA, CAFA, good for models and graph
 
+  
 sap_status %>% 
   group_by(Disturbance) %>% 
   summarise(n())
@@ -54,15 +55,18 @@ com.species <- sap_status %>%
   count(Species, name = 'number') %>%  # gives the number of treatments species observed
   group_by(Species) %>% 
   summarise(sum = sum(number)) %>% filter(sum >= 3) %>%  # found in all three treatments
-  select(Species) %>% # here, you can see saplings sp. with more than five individual
-  left_join(sap_status, by = "Species") %>%  # then the freq sp is joined to sapstatus
-  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
+  select(Species) %>% # here, we can see saplings sp. with more than five individual
+  left_join(sap_status, by = "Species") %>%  # then the freq sp is join to sapstatus
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) %>% 
+  mutate(Species= factor(Species)) %>% 
+  mutate(Species= fct_relevel(Species, c('Acacia chundra'))) # Acacia chundra reference sp.
 
 # View(com.species)
 com.species %>% distinct(Species)
 
 # number of sites for the analysis
-com.species %>% distinct(site, Treatment) %>% group_by(Treatment) %>% summarise(sites=n())
+com.species %>% distinct(site, Treatment) %>% 
+  group_by(Treatment) %>% summarise(sites=n())
 
 
 # healthy common species-----

@@ -484,7 +484,7 @@ ENSPIE <- ggplot() +
 
 ENSPIE
 
-
+# fig 2----
 ENSPIE_legend <- ENSPIE + theme(legend.position="bottom")
 
 legendfig1 <- extract_legend(ENSPIE_legend) # extract_legend, a custom function
@@ -500,3 +500,328 @@ ggsave('figure2.jpg', figure2,
        width = 10,
        height = 6,
        dpi = 300)
+
+
+# slope-----
+# load models
+load(file='N.alpha.Rdata')
+load(file='S.alpha.Rdata')
+load(file='Sn_alpha.Rdata')
+load(file='ENSPIE_alpha.Rdata')
+
+# make dfs
+N.alpha_fitted.df <- cbind(N.alpha$data, fitted(N.alpha, re_formula = NA)) %>% 
+  as_tibble() %>% left_join(alpha_sum_sd)
+
+N.alpha_post.df <- as_draws_df(N.alpha, subset= floor(runif(n= 1000, 1, max = 2000))) %>% 
+  select(contains('b_'))
+head(N.alpha_post.df)
+
+colnames(N.alpha_post.df)
+
+n.alpha_post <- N.alpha_post.df %>% as_tibble() %>% 
+  mutate(ctrl_slope= (`b_LUI`), # to get the slope for treat
+         cpfa_slope= (`b_LUI`+ `b_TreatmentCPFA:LUI`),
+         cafa_slope= (`b_LUI`+ `b_TreatmentCAFA:LUI`)
+         
+  ) %>% 
+  dplyr::select(c(ctrl_slope, cpfa_slope, cafa_slope))
+
+# view(n.alpha_post)
+colnames(n.alpha_post)
+
+N_control_slope <- n.alpha_post %>% 
+  mutate(response = 'N', Treatment= 'Control',  slope = mean(ctrl_slope),
+         slope_lower = quantile(ctrl_slope, probs = 0.025),
+         slope_upper = quantile(ctrl_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(N_control_slope)
+
+N_cpfa_slope <- n.alpha_post %>% 
+  mutate(response = 'N', Treatment= 'CPFA',  slope = mean(cpfa_slope),
+         slope_lower = quantile(cpfa_slope, probs = 0.025),
+         slope_upper = quantile(cpfa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(N_cpfa_slope)
+
+N_cafa_slope <- n.alpha_post %>% 
+  mutate(response = 'N', Treatment= 'CAFA',  slope = mean(cafa_slope),
+         slope_lower = quantile(cafa_slope, probs = 0.025),
+         slope_upper = quantile(cafa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(N_cafa_slope)
+
+# ----
+S.alpha_post.df <- as_draws_df(S.alpha, subset= floor(runif(S= 1000, 1, max = 2000))) %>% 
+  select(contains('b_'))
+
+head(S.alpha_post.df, 2)
+
+colnames(S.alpha_post.df)
+
+S.alpha_post <- S.alpha_post.df %>% as_tibble() %>% 
+  mutate(ctrl_slope= (`b_LUI`), # to get the slope for treat
+         cpfa_slope= (`b_LUI`+ `b_TreatmentCPFA:LUI`),
+         cafa_slope= (`b_LUI`+ `b_TreatmentCAFA:LUI`)
+         
+  ) %>% 
+  dplyr::select(c(ctrl_slope, cpfa_slope, cafa_slope))
+
+# view(S.alpha_post)
+colnames(S.alpha_post)
+
+S_control_slope <- S.alpha_post %>% 
+  mutate(response = 'S', Treatment= 'Control',  slope = mean(ctrl_slope),
+         slope_lower = quantile(ctrl_slope, probs = 0.025),
+         slope_upper = quantile(ctrl_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(S_control_slope)
+
+S_cpfa_slope <- S.alpha_post %>% 
+  mutate(response = 'S', Treatment= 'CPFA',  slope = mean(cpfa_slope),
+         slope_lower = quantile(cpfa_slope, probs = 0.025),
+         slope_upper = quantile(cpfa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(S_cpfa_slope)
+
+S_cafa_slope <- S.alpha_post %>% 
+  mutate(response = 'S', Treatment= 'CAFA',  slope = mean(cafa_slope),
+         slope_lower = quantile(cafa_slope, probs = 0.025),
+         slope_upper = quantile(cafa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(S_cafa_slope)
+
+# Sn-----
+Sn.alpha_post.df <- as_draws_df(Sn_alpha, subset= floor(runif(S= 1000, 1, max = 2000))) %>% 
+  select(contains('b_'))
+head(Sn.alpha_post.df, 2)
+
+colnames(Sn.alpha_post.df)
+
+Sn.alpha_post <- Sn.alpha_post.df %>% as_tibble() %>% 
+  mutate(ctrl_slope= (`b_LUI`), # to get the slope for treat
+         cpfa_slope= (`b_LUI`+ `b_TreatmentCPFA:LUI`),
+         cafa_slope= (`b_LUI`+ `b_TreatmentCAFA:LUI`)
+         
+  ) %>% 
+  dplyr::select(c(ctrl_slope, cpfa_slope, cafa_slope))
+
+# view(Sn.alpha_post)
+colnames(Sn.alpha_post)
+
+Sn_control_slope <- Sn.alpha_post %>% 
+  mutate(response = 'Sn', Treatment= 'Control',  slope = mean(ctrl_slope),
+         slope_lower = quantile(ctrl_slope, probs = 0.025),
+         slope_upper = quantile(ctrl_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(Sn_control_slope)
+
+Sn_cpfa_slope <- Sn.alpha_post %>% 
+  mutate(response = 'Sn', Treatment= 'CPFA',  slope = mean(cpfa_slope),
+         slope_lower = quantile(cpfa_slope, probs = 0.025),
+         slope_upper = quantile(cpfa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(Sn_cpfa_slope)
+
+Sn_cafa_slope <- Sn.alpha_post %>% 
+  mutate(response = 'Sn', Treatment= 'CAFA',  slope = mean(cafa_slope),
+         slope_lower = quantile(cafa_slope, probs = 0.025),
+         slope_upper = quantile(cafa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(Sn_cafa_slope)
+
+# ENSPIE
+ENSPIE.alpha_post.df <- as_draws_df(ENSPIE_alpha, subset= floor(runif(S= 1000, 1, max = 2000))) %>% 
+  select(contains('b_'))
+head(ENSPIE.alpha_post.df)
+
+colnames(ENSPIE.alpha_post.df)
+
+ENSPIE.alpha_post <- ENSPIE.alpha_post.df %>% as_tibble() %>% 
+  mutate(ctrl_slope= (`b_LUI`), # to get the slope for treat
+         cpfa_slope= (`b_LUI`+ `b_TreatmentCPFA:LUI`),
+         cafa_slope= (`b_LUI`+ `b_TreatmentCAFA:LUI`)
+         
+  ) %>% 
+  dplyr::select(c(ctrl_slope, cpfa_slope, cafa_slope))
+
+# view(ENSPIE.alpha_post)
+colnames(ENSPIE.alpha_post)
+
+ENSPIE_control_slope <- ENSPIE.alpha_post %>% 
+  mutate(response = 'ENSPIE', Treatment= 'Control',  slope = mean(ctrl_slope),
+         slope_lower = quantile(ctrl_slope, probs = 0.025),
+         slope_upper = quantile(ctrl_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(ENSPIE_control_slope)
+
+ENSPIE_cpfa_slope <- ENSPIE.alpha_post %>% 
+  mutate(response = 'ENSPIE', Treatment= 'CPFA',  slope = mean(cpfa_slope),
+         slope_lower = quantile(cpfa_slope, probs = 0.025),
+         slope_upper = quantile(cpfa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(ENSPIE_cpfa_slope)
+
+ENSPIE_cafa_slope <- ENSPIE.alpha_post %>% 
+  mutate(response = 'ENSPIE', Treatment= 'CAFA',  slope = mean(cafa_slope),
+         slope_lower = quantile(cafa_slope, probs = 0.025),
+         slope_upper = quantile(cafa_slope, probs = 0.975)) %>% 
+  dplyr::select(c(response, Treatment, slope, slope_lower, slope_upper )) %>% 
+  distinct()
+
+# view(ENSPIE_cafa_slope)
+
+# Slope for reporting-----
+N_slope <- bind_rows(N_control_slope, N_cpfa_slope, N_cafa_slope ) %>% 
+  mutate(Treatment = factor(Treatment )) %>% 
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
+
+S_slope <- bind_rows(S_control_slope, S_cpfa_slope, S_cafa_slope )%>% 
+  mutate(Treatment = factor(Treatment )) %>% 
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
+
+Sn_slope <- bind_rows(Sn_control_slope, Sn_cpfa_slope, Sn_cafa_slope )%>% 
+  mutate(Treatment = factor(Treatment )) %>% 
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
+
+ENSPIE_slope <- bind_rows(ENSPIE_control_slope, 
+                          ENSPIE_cpfa_slope, 
+                          ENSPIE_cafa_slope )%>% 
+  mutate(Treatment = factor(Treatment )) %>% 
+  mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
+
+
+
+Table1 <- bind_rows(N_slope, S_slope, Sn_slope,
+                   ENSPIE_slope )
+
+Table1
+
+# Slope supp figs-----
+N_slopeFig <- ggplot()+
+  geom_point(data= N_slope,aes(x= Treatment, y= slope, col= Treatment ),
+             size= 2)+
+  geom_errorbar(data= N_slope, aes(x= Treatment, 
+                                   ymin= slope_lower,
+                                   ymax= slope_upper,
+                                   col= Treatment),
+                width= 0, linewidth = 0.7) + 
+  geom_hline(yintercept = 0, 
+             lty= 2)+
+  scale_color_viridis(discrete = T, option="D")  + 
+  scale_fill_viridis(discrete = T, option="D")  + 
+  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
+                                  legend.position=" ")+
+  labs(subtitle= '(a)')+
+  guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
+  labs(y = "Slope: N")
+
+N_slopeFig
+
+S_slopeFig <- ggplot()+
+  geom_point(data= S_slope, aes(x= Treatment, y= slope, col= Treatment ),
+             size= 2)+
+  geom_errorbar(data= S_slope, aes(x= Treatment, 
+                                   ymin= slope_lower,
+                                   ymax= slope_upper,
+                                   col= Treatment),
+                width= 0, linewidth = 0.7) + 
+  geom_hline(yintercept = 0, 
+             lty= 2)+
+  scale_color_viridis(discrete = T, option="D")  + 
+  scale_fill_viridis(discrete = T, option="D")  + 
+  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
+                                  legend.position="none")+
+  labs(subtitle= '(b)')+
+  guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
+  labs(y = "Slope: S ")
+
+
+Sn_slopeFig <- ggplot()+
+  geom_point(data= Sn_slope, aes(x= Treatment, y= slope, col= Treatment ),
+             size= 2)+
+  geom_errorbar(data= Sn_slope, aes(x= Treatment, 
+                                    ymin= slope_lower,
+                                    ymax= slope_upper,
+                                    col= Treatment),
+                width= 0, linewidth = 0.7) + 
+  geom_hline(yintercept = 0, 
+             lty= 2)+
+  scale_color_viridis(discrete = T, option="D")  + 
+  scale_fill_viridis(discrete = T, option="D")  + 
+  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
+                                  legend.position=" ")+
+  labs(subtitle= '(c)')+
+  guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
+  labs(y = expression(paste("Slope: ", S[n])))
+
+
+ENSPIE_slopeFig <- ggplot()+
+  geom_point(data= ENSPIE_slope, aes(x= Treatment, y= slope, col= Treatment ),
+             size= 2)+
+  geom_errorbar(data= ENSPIE_slope, aes(x= Treatment, 
+                                        ymin= slope_lower,
+                                        ymax= slope_upper,
+                                        col= Treatment),
+                width= 0, linewidth = 0.7) + 
+  geom_hline(yintercept = 0, 
+             lty= 2)+
+  scale_color_viridis(discrete = T, option="D")  + 
+  scale_fill_viridis(discrete = T, option="D")  + 
+  theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
+                                  legend.position=" ")+
+  labs(subtitle= '(d)')+
+  guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
+  labs(y = expression(paste("Slope: ", ENS[PIE])))
+
+S_slopeFig
+N_slopeFig
+Sn_slopeFig
+ENSPIE_slopeFig
+
+# extract legend
+ENSPIE_legend <- ENSPIE_slopeFig + theme(legend.position="bottom")
+legendfigS1 <- extract_legend(ENSPIE_legend) 
+
+# plot
+figureS2 <- (N_slopeFig|S_slopeFig)/(Sn_slopeFig|ENSPIE_slopeFig)/(legendfigS1) + plot_layout(heights = c(10,10,2))
+figureS2
+
+save(figureS2, file='figureS2.Rdata')
+
+load('figureS2.Rdata')
+figureS2
+
+ggsave('figureS2.jpg', figureS2,
+       width = 10,
+       height = 6,
+       dpi = 300)
+
+
+
+
+
+
+

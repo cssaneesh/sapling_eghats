@@ -44,7 +44,16 @@ seedling.dat %>%
   count(Treatment, name = 'sites')
 
 seedling.dat %>% 
-  filter(LUI <= 0.60) %>% view()
+  filter(LUI <= 0.60) # %>% view() = low
+
+
+seedling.dat %>% 
+  filter(LUI >= 0.61,LUI <= 1.20 ) # %>% view() = medium
+
+seedling.dat %>% 
+  filter(LUI >= 1.21) # %>% view() = high
+
+summary(seedling.dat$LUI)
 
 
 # Functions----

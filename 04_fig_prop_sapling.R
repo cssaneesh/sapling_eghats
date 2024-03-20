@@ -11,12 +11,11 @@ com.species %>% group_by(Treatment) %>%
 
 # figure 4----
 
-# Modeling of disturbance probability in response to Treatment
+# Modeling of probability of saplings being disturbed in response to Treatment
 
-# dist.prob_treat <- brm(Disturbance ~ Treatment + (1|Species), # dist.prob_treat=disturbance probability in response to Treatment
+# dist.prob_treat <- brm(Disturbance ~ Treatment + (1|Species), # disturbed=1, undisturbed= 0
 #                          data= com.species, # common species found all treatments with more than 5 individuals
-#                          # data= sap_status, # all species
-#                  family = bernoulli(link = "logit"),
+#                          family = bernoulli(link = "logit"),
 #                  chains = 4,
 #                  warmup = 1000,
 #                  iter = 4000,
@@ -48,7 +47,6 @@ mcmc_plot(dist.prob_treat,
 
 summary(dist.prob_treat)
 conditional_effects(dist.prob_treat)
-
 
 fixef(dist.prob_treat)
 ranef(dist.prob_treat) # for plot
@@ -100,6 +98,11 @@ load(file= 'dist.prob_treat.Rdata')
 load(file= 'dist.prob_sp.Rdata')
 
 # Given log odds for Treatments
+
+cf <- conditional_effects(dist.prob_treat)
+cf.df <- as.data.frame(cf$Treatment)
+
+
 # dist.prob_treat
 library(broom.mixed)
 df <- as.data.frame(tidy(dist.prob_treat))
@@ -168,7 +171,9 @@ prop_treat
 
 # make df for figures
 dist.prob_sp.ce <- conditional_effects(dist.prob_sp)
-dist.prob_sp.df <- as.data.frame(dist.prob_sp.ce$Species)
+dist.prob_sp.df <- as.data.frame(dist.prob_sp.ce$Species) %>%
+  select(Species , estimate__, lower__, upper__)
+
 fitted_values1 <- fitted(dist.prob_sp)
 average_effect1 <- mean(fitted_values1) # 0.21, for hline
 
