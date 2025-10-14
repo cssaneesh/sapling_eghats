@@ -38,13 +38,15 @@ sap_status <- rgr %>%
     Browsing = if_else(disturbance == 'browsed', 1, 0),        # 1 if browsed, 0 otherwise
     Trampling = if_else(disturbance == 'trampled', 1, 0),      # 1 if trampled, 0 otherwise
     Wat.stress = if_else(disturbance == 'partly_dried', 1, 0), # 1 if partly dried (water stress), 0 otherwise
-    Disturbance = if_else(disturbance == 'none', 0, 1)) %>%           # 0 if no disturbance, 1 otherwise
+    # Disturbance = if_else(disturbance == 'none', 0, 1)) %>%           # 0 if no disturbance, 1 otherwise
+    Health_status = if_else(disturbance == 'none', 1, 0)) %>%           # 1 if healthy, 0 otherwise
   mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA"))) 
 # :) reorder the levels of the 'Treatment' factor variable to Control, CPFA, CAFA, good for models and graph
 
   
 sap_status %>% 
-  group_by(Disturbance) %>% 
+  # group_by(Disturbance) %>% 
+  group_by(Health_status) %>%
   summarise(n())
 
 

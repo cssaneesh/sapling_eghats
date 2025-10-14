@@ -92,3 +92,51 @@ mycol <- custom_theme <- function() {
     ggplot2::scale_fill_viridis(discrete = discrete, option = option)
   }
 }
+
+
+# sup figure
+
+names(seedling.dat)
+
+figureS3 <- seedling.dat %>% 
+  group_by(Treatment,sci.name) %>% 
+  summarise(total_count = sum(seedling), .groups = 'drop') %>% 
+  group_by(sci.name) %>% 
+  mutate(relative_count = total_count / sum(total_count)) %>%
+  ungroup() %>% filter(!sci.name %in% c('Acacia nilotica','Albizia amara', 'Pongamia pinnata')) %>% 
+  filter(relative_count < 1) %>% #view()
+  ggplot(aes(x = sci.name, y = relative_count, fill = Treatment)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(
+    title = "The distribution of each species across the three treatments.",
+    x = "Species",
+    y = "Proportion of Species Population Found in Treatment",
+    fill = "Treatment"
+  )+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14)) +
+  # theme_bw(base_size=13 )+
+  scale_y_continuous(labels = scales::percent)+
+  scale_fill_manual(
+    name = "Treatment",
+    
+    # 1. Correctly provide the NEW TEXT labels (what you want to see)
+    labels = c("Control" = "Both present",
+               "CPFA" = "Fire present",
+               "CAFA" = "Both excluded"),
+    
+    # 2. **CRITICAL FIX:** Explicitly provide the COLORS (the values)
+    #    mapped to the original factor levels to avoid the "Insufficient values" error.
+    values = c("Control" = "#f8766d", 
+               "CPFA" = "#00ba38", 
+               "CAFA" = "#619cff")
+  )
+
+figureS3
+
+ggsave('figureS3.jpg', figureS3,
+       width = 10,
+       height = 6,
+       dpi = 300)
+
+

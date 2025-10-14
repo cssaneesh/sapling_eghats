@@ -11,9 +11,10 @@ com.species %>% group_by(Treatment) %>%
 
 # figure 4----
 
-# Modeling of probability of saplings being disturbed in response to Treatment
+# Modeling of proportion of healthy saplings in response to Treatment
 
 # dist.prob_treat <- brm(Disturbance ~ Treatment + (1|Species), # disturbed=1, undisturbed= 0
+# dist.prob_treat <- brm(Health_status ~ Treatment + (1|Species), # 1 if healthy, 0 otherwise           
 #                          data= com.species, # common species found all treatments with more than 5 individuals
 #                          family = bernoulli(link = "logit"),
 #                  chains = 4,
@@ -136,7 +137,8 @@ prop_treat <- ggplot() +
     data = sap_status,
     # raw data
     aes(x = Treatment, # predicting variable
-        y = Disturbance, # response variable
+        y= Health_status,
+        # y = Disturbance, # response variable
         col = Treatment),
     size = 1.5,
     alpha = 0.3,
@@ -163,11 +165,18 @@ prop_treat <- ggplot() +
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(y= 'Proportion of undisturbed saplings per site', subtitle= '(a)')+
-  guides(fill= 'none')
+  labs(y= 'Proportion of healthy saplings', subtitle= '(a)')+
+  guides(fill= 'none') +
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )
 
 
-prop_treat
+prop_treat 
 
 # make df for figures
 dist.prob_sp.ce <- conditional_effects(dist.prob_sp)
@@ -182,7 +191,8 @@ prop_sp <- ggplot() +
     data = com.species,
     # raw data
     aes(x = Species, # predicting variable
-        y = Disturbance, # response variable
+        y= Health_status,
+        # y = Disturbance, # response variable
         col = Species),
     size = 1.5,
     alpha = 0.3,
@@ -212,8 +222,8 @@ prop_sp <- ggplot() +
   # scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
                                   legend.position="none")+
-  labs(x= 'Species', y= 'Proportion of undisturbed \nsaplings for each species'  , subtitle= '(b)')+
-  guides(fill= 'none')
+  labs(x= 'Species', y= 'Proportion of healthy \nsaplings for each species'  , subtitle= '(b)')+
+  guides(fill= 'none') 
 
 prop_sp
 
@@ -229,8 +239,4 @@ ggsave('figure4.jpg', figure4,
        width = 10,
        height = 6,
        dpi = 300)
-
-
-
-
-
+# end -----

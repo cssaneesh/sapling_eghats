@@ -132,15 +132,27 @@ acc.curve
     strip.background = element_rect(colour =
                                       "black", fill = "white"),
     # legend.position = c(x=1.32, y=.96),
-    legend.position = c(x=1.50, y=.97),
+    legend.position = c(x=1.4, y=.97),
     legend.justification = c('right', 'top'),
     legend.background = element_rect(fill = NA)
   ) +
   guides(fill = 'none')+ theme(strip.text.x = element_blank())+ # to remove the grey box
   ggtitle('', subtitle = '(a)')+
   theme(plot.subtitle = element_text(hjust = 1, vjust = 3))+
-  labs(title = '', subtitle = '') # to create space for a and b in the upcoming step.
+  labs(title = '', subtitle = '')+ # to create space for a and b in the upcoming step.
+    # Use scale_color_manual to define the new legend labels
+    scale_color_manual(
+      name = "Treatment", # Keep the legend title if desired
+      # Assign the new labels to the original factor levels in the correct order
+      values = c("Control" = "#440154",  # Specify colors if needed, otherwise use the defaults
+                 "CPFA" = "#21908c",
+                 "CAFA" = "#fde725"),
+      labels = c("Control" = "Both present",
+                 "CPFA" = "Fire present",
+                 "CAFA" = "Both excluded")
+    )
 
+acc.curve_1
 
 figure3 <- acc.curve_1+
   theme(

@@ -189,7 +189,14 @@ rgrrcd.a <- ggplot()+
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position="none")
+                                  legend.position="none") +
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )
 
 
 rgrrcd.a
@@ -262,7 +269,14 @@ rgrh.c <- ggplot()+
   labs(y= 'Relative Growth: \n Height', subtitle= '(c)')+scale_color_viridis(discrete = T, option="D")  + 
   scale_fill_viridis(discrete = T, option="D")  + 
   theme_bw(base_size=14 ) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(colour="black", fill="white"),
-                                  legend.position="none")
+                                  legend.position="none")+
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )
 
 rgrh.c
 

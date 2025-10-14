@@ -21,7 +21,7 @@ alpha_sum_sd <- seedling.dat %>%
     # number of unique species/richness
     N = sum(abundance),
     # total number of seedlings
-    S_PIE = mobr::calc_PIE(abundance, ENS = T),
+    S_PIE = mobr::calc_PIE(abundance, replace = T),
     # Simpson's evenness index
     ENSPIE = vegan::diversity(abundance, index = 'invsimpson'),
     .groups = "drop") %>%
@@ -36,7 +36,6 @@ alpha_sum_sd %>% group_by(Treatment) %>%
   summarise(N_sites = n_distinct(site))
 # Control= 8, CPFA =10, CAFA = 17
 
-
 # individual based rarefaction before fitting models----
 # IBR is ideal for varying sampling efforts
 alpha_data_sd <- seedling.dat %>% # sd= seedling
@@ -50,7 +49,7 @@ alpha_data_sd <- seedling.dat %>% # sd= seedling
   group_by(site, LUI) %>% 
   nest(data=c(sci.name, abundance, minN)) %>% 
   ungroup() %>% 
-  mutate(Sn = purrr::map(data, ~mobr::rarefaction(.x$abundance, method = 'IBR', effort = unique(.x$minN)))) %>% 
+  mutate(Sn = purrr::map(data, ~ mobr::rarefaction(.x$abundance, method = 'IBR', effort = unique(.x$minN)))) %>% 
   unnest(Sn)
 
 # put Sn into the alpha_summary df
@@ -321,7 +320,7 @@ N <- ggplot() +
       fill = effect2__
     ), alpha= 0.3
   ) +
-  labs(y= 'N', x= 'Land use intensity index',
+  labs(y= 'Seedling individuals (N)', x= 'Land use intensity index',
        subtitle = ' ')+
   coord_cartesian(ylim = c(0, 610), xlim = c(0.21, 1))+
   scale_color_viridis(discrete = T, option="D")  + 
@@ -485,7 +484,20 @@ ENSPIE <- ggplot() +
 ENSPIE
 
 # fig 2----
-ENSPIE_legend <- ENSPIE + theme(legend.position="bottom")
+ENSPIE_legend <- ENSPIE + theme(legend.position="bottom")+
+  # Use scale_color_manual to define the new legend labels
+  scale_color_manual(
+    name = "Treatment", # Keep the legend title if desired
+    # Assign the new labels to the original factor levels in the correct order
+    values = c("Control" = "#440154",  # Specify colors if needed, otherwise use the defaults
+               "CPFA" = "#21908c",
+               "CAFA" = "#fde725"),
+    labels = c("Control" = "Both present",
+               "CPFA" = "Fire present",
+               "CAFA" = "Both excluded")
+  )
+
+  
 
 legendfig1 <- extract_legend(ENSPIE_legend) # extract_legend, a custom function
 
@@ -515,6 +527,7 @@ N.alpha_fitted.df <- cbind(N.alpha$data, fitted(N.alpha, re_formula = NA)) %>%
 
 N.alpha_post.df <- as_draws_df(N.alpha, subset= floor(runif(n= 1000, 1, max = 2000))) %>% 
   select(contains('b_'))
+
 head(N.alpha_post.df)
 
 colnames(N.alpha_post.df)
@@ -606,6 +619,7 @@ S_cafa_slope <- S.alpha_post %>%
 # Sn-----
 Sn.alpha_post.df <- as_draws_df(Sn_alpha, subset= floor(runif(S= 1000, 1, max = 2000))) %>% 
   select(contains('b_'))
+
 head(Sn.alpha_post.df, 2)
 
 colnames(Sn.alpha_post.df)
@@ -712,14 +726,23 @@ ENSPIE_slope <- bind_rows(ENSPIE_control_slope,
   mutate(Treatment = factor(Treatment )) %>% 
   mutate(Treatment = fct_relevel(Treatment, c("Control", "CPFA", "CAFA")))
 
-
+# Table----
 
 Table1 <- bind_rows(N_slope, S_slope, Sn_slope,
                    ENSPIE_slope )
 
 Table1
+# expected decrease of seedlings
+(N_observed <- mean(alpha_sum_sd$N))
+# Calculate e^(-4.56), estimate of CAFA:LUI
+(decrease <-  exp(Table1[3,3]))
+# Calculate the percentage decrease
+(percentage_decrease <- 1 - decrease)
+# N_exptected= N_observed*decrease
+(N_exptected <- N_observed * (decrease + exp(Table1[1,3])))
 
-# Slope supp figs-----
+# Slope S upp figs-----
+# S1
 N_slopeFig <- ggplot()+
   geom_point(data= N_slope,aes(x= Treatment, y= slope, col= Treatment ),
              size= 2)+
@@ -736,7 +759,14 @@ N_slopeFig <- ggplot()+
                                   legend.position=" ")+
   labs(subtitle= '(a)')+
   guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
-  labs(y = "Slope: N")
+  labs(y = "Slope: N")+
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )
 
 N_slopeFig
 
@@ -756,8 +786,16 @@ S_slopeFig <- ggplot()+
                                   legend.position="none")+
   labs(subtitle= '(b)')+
   guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
-  labs(y = "Slope: S ")
+  labs(y = "Slope: S ")+
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )
 
+S_slopeFig
 
 Sn_slopeFig <- ggplot()+
   geom_point(data= Sn_slope, aes(x= Treatment, y= slope, col= Treatment ),
@@ -775,8 +813,16 @@ Sn_slopeFig <- ggplot()+
                                   legend.position=" ")+
   labs(subtitle= '(c)')+
   guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
-  labs(y = expression(paste("Slope: ", S[n])))
+  labs(y = expression(paste("Slope: ", S[n])))+
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )
 
+Sn_slopeFig
 
 ENSPIE_slopeFig <- ggplot()+
   geom_point(data= ENSPIE_slope, aes(x= Treatment, y= slope, col= Treatment ),
@@ -794,10 +840,30 @@ ENSPIE_slopeFig <- ggplot()+
                                   legend.position=" ")+
   labs(subtitle= '(d)')+
   guides(fill= 'none')+ # remove a section of the legend, here fill= effect__
-  labs(y = expression(paste("Slope: ", ENS[PIE])))
+  labs(y = expression(paste("Slope: ", ENS[PIE])))+
+  # Use scale_x_discrete to modify the x-axis labels
+  scale_x_discrete(
+    # The 'breaks' argument should list your original factor levels
+    breaks = c("Control", "CPFA", "CAFA"),
+    # The 'labels' argument provides the new names in the same order
+    labels = c("Both present", "Fire present", "Both excluded")
+  )+
+  # Use scale_color_manual to define the new legend labels
+  scale_color_manual(
+    name = "Treatment", # Keep the legend title if desired
+    # Assign the new labels to the original factor levels in the correct order
+    values = c("Control" = "#440154",  # Specify colors if needed, otherwise use the defaults
+               "CPFA" = "#21908c",
+               "CAFA" = "#fde725"),
+    labels = c("Control" = "Both present",
+               "CPFA" = "Fire present",
+               "CAFA" = "Both excluded")
+  )
 
+ENSPIE_slopeFig
+
+N_slopeFig 
 S_slopeFig
-N_slopeFig
 Sn_slopeFig
 ENSPIE_slopeFig
 
@@ -806,22 +872,18 @@ ENSPIE_legend <- ENSPIE_slopeFig + theme(legend.position="bottom")
 legendfigS1 <- extract_legend(ENSPIE_legend) 
 
 # plot
-figureS2 <- (N_slopeFig|S_slopeFig)/(Sn_slopeFig|ENSPIE_slopeFig)/(legendfigS1) + plot_layout(heights = c(10,10,2))
+figureS2 <- (N_slopeFig|S_slopeFig)/(Sn_slopeFig|ENSPIE_slopeFig) + plot_layout(heights = c(10,10,2))
+
 figureS2
 
 save(figureS2, file='figureS2.Rdata')
 
 load('figureS2.Rdata')
+
 figureS2
 
 ggsave('figureS2.jpg', figureS2,
        width = 10,
        height = 6,
        dpi = 300)
-
-
-
-
-
-
 
