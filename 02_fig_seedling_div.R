@@ -58,6 +58,8 @@ alpha_sum_sd <- inner_join(alpha_sum_sd %>% ungroup(),
                              dplyr::select(site, Treatment, Sn, village),
                             by = c('site', 'Treatment', 'village')
                            )
+hist(alpha_sum_sd$Sn)
+
 # Models-----
 names(alpha_sum_sd)
 # 1. Number of individuals in response to Treatment and LUI
@@ -75,7 +77,7 @@ boxplot(N ~ village, data = alpha_sum_sd) # village as a random effect
 #     iter = 4000)
 # 
 # save(N.alpha, file= 'N.alpha.Rdata')
-
+# 
 load('N.alpha.Rdata')
 
 mcmc_plot(N.alpha,
@@ -98,29 +100,37 @@ summary(N.alpha)
 
 conditional_effects(N.alpha, effects = "LUI:Treatment")
 
-# expected decrease of seedlings
-N_bserved <- max(alpha_sum_sd$N)
-# Calculate e^(-2.27), estimate of TreatmentCAFA:LUI
-decrease <- exp(-2.27)
-# Calculate the percentage decrease
-(percentage_decrease <- 1 - decrease)
+# expected decrease of seedlings in both present
 
-# N_exptected= N_bserved*decrease
-(N_exptected <- N_bserved*decrease)
+N_bserved <- max(alpha_sum_sd$N)
+# Calculate e^(-2.24), estimate of TreatmentCAFA:LUI
+decrease <- exp(-2.24)
+# Calculate the percentage decrease
+(percentage_decrease <- 1 - decrease)* 100
+
+# # expected decrease of seedlings in both absent
+
+# LUI slope for CAFA is the sum of main LUI slope and the interaction term
+# BETA CAFALUI = BETA LUI + BETA CAFA:LUI= -2.24 +(-2.32)= -4.56
+
+BetaCAFALUI <- -2.24 + (-2.32) # BetaCAFA:LUI= -4.56 on the log scale
+multiplicative_factor <- exp(BetaCAFALUI) # = 0.01046206
+percentage_change <- round((1- multiplicative_factor) * 100) # = 99%
 
 # 2. Species Richness (S) Considering Treatment and Land Use Intensity (LUI)
 
 boxplot(S ~ village, data = alpha_sum_sd) # village as a random effect
 
-# S.alpha <-
-#   brm(
-#     S ~ Treatment * LUI + (1 | village),
-#     family = poisson(), # poisson error for species richness
-#     data = alpha_sum_sd,
-#     chains = 4,
-#     warmup = 1000,
-#     iter = 4000
-#   )
+S.alpha <-
+  brm(
+    S ~ Treatment * LUI + (1 | village),
+    # family = poisson(), # poisson error for species richness
+    family = student(),
+    data = alpha_sum_sd,
+    chains = 4,
+    warmup = 1000,
+    iter = 4000
+  )
 # save(S.alpha, file= 'S.alpha.Rdata')
 
 load('S.alpha.Rdata')
@@ -140,7 +150,6 @@ pp_check(S.alpha, ndraws = 30)+ # predicted vs. observed values
   xlab( "S") + ylab("Density")+
   theme_classic()+ 
   theme(legend.position = 'none') # predicted vs. observed values
-
 
 summary(S.alpha)
 
@@ -167,13 +176,15 @@ alpha_sum_sd %>%
   
 # Sn_alpha <- brm(
 #   Sn ~ Treatment * LUI + (1 | village),
-#   family = lognormal() ,
+#   # family = lognormal() ,
+#   family = student(),
+#   # family = mixture(student(), student()),
 #   data = alpha_sum_sd,
 #   cores = 4,
 #   chains = 4,
-#   warmup = 1000,
-#   iter = 4000,
-#   # control = list(adapt_delta = 0.9)
+#   warmup = 2000,
+#   iter = 5000#,
+#   # control = list(adapt_delta = 0.99, max_treedepth = 15)
 # )
 # save(Sn_alpha, file='Sn_alpha.Rdata')
 
@@ -223,12 +234,15 @@ alpha_sum_sd %>%
 boxplot(ENSPIE ~ site, data = alpha_sum_sd) # for random effect
 boxplot(ENSPIE ~ village, data = alpha_sum_sd) # for random effect
 
+hist(alpha_sum_sd$ENSPIE)
 
 # equally abundant species in a perfectly even community (ENSPIE) Considering Treatment and Land Use Intensity (LUI)
+
 # ENSPIE_alpha <- brm(
 #   ENSPIE ~ Treatment * LUI + (1 | village),
 #   # family= Gamma(),
-#   family = lognormal(),
+#   # family = lognormal(),
+#   family = student(),
 #   data = alpha_sum_sd,
 #   cores = 4,
 #   chains = 4,
@@ -247,7 +261,6 @@ mcmc_plot(object = ENSPIE_alpha,
 
 mcmc_plot(ENSPIE_alpha, type= 'trace')
 mcmc_plot(ENSPIE_alpha, type= 'acf')
-
 
 # pp_check
 color_scheme_set("darkgray")
