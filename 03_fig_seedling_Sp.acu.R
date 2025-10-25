@@ -162,12 +162,12 @@ figure3 <- acc.curve_1+
 
 figure3
 
-save(figure3, file= 'figure3.Rdata')
+save(figure3, file= 'output/figure3.Rdata')
 
-load(file= 'figure3.Rdata')
+load(file= 'output/figure3.Rdata')
 figure3
 
-ggsave('figure3.jpg', figure3,
+ggsave('output/figure3.jpg', figure3,
        width = 10,
        height = 6,
        dpi = 300)

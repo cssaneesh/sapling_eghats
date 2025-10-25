@@ -134,7 +134,7 @@ figureS3 <- seedling.dat %>%
 
 figureS3
 
-ggsave('figureS3.jpg', figureS3,
+ggsave('output/figureS3.jpg', figureS3,
        width = 10,
        height = 6,
        dpi = 300)

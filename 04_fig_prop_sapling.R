@@ -23,9 +23,9 @@ com.species %>% group_by(Treatment) %>%
 #                  thin = 1,
 #                  control = list(adapt_delta = 0.99) # divergent 5 at 0.9!
 #                  )
-# save(dist.prob_treat, file= 'dist.prob_treat.Rdata')
+# save(dist.prob_treat, file= 'output/dist.prob_treat.Rdata')
 
-load(file= 'dist.prob_treat.Rdata')
+load(file= 'output/dist.prob_treat.Rdata')
 
 # pp_check
 color_scheme_set("darkgray")
@@ -68,9 +68,9 @@ coef(dist.prob_treat)
 #     control = list(adapt_delta = 0.9)
 #   )
 
-# save(dist.prob_sp, file= 'dist.prob_sp.Rdata')
+# save(output/dist.prob_sp, file= 'dist.prob_sp.Rdata')
 
-load(file= 'dist.prob_sp.Rdata')
+load(file= 'output/dist.prob_sp.Rdata')
 
 # pp_check
 color_scheme_set("darkgray")
@@ -95,8 +95,8 @@ summary(dist.prob_sp)
 conditional_effects(dist.prob_sp)
 
 
-load(file= 'dist.prob_treat.Rdata')
-load(file= 'dist.prob_sp.Rdata')
+load(file= 'output/dist.prob_treat.Rdata')
+load(file= 'output/dist.prob_sp.Rdata')
 
 # Given log odds for Treatments
 
@@ -125,8 +125,8 @@ df1 %>%
   filter(effect== 'fixed')
 
 # make df for figures
-# load(file= 'dist.prob_treat.Rdata')
-# load(file= 'dist.prob_sp.Rdata')
+# load(file= 'output/dist.prob_treat.Rdata')
+# load(file= 'output/dist.prob_sp.Rdata')
 
 dist.prob_treat.ce <- conditional_effects(dist.prob_treat)
 dist.prob_treat.df <- as.data.frame(dist.prob_treat.ce$Treatment)
@@ -230,12 +230,12 @@ prop_sp
 figure4 <- (prop_treat | prop_sp)
 figure4
 
-save(figure4, file= 'figure4.Rdata')
+save(figure4, file= 'output/figure4.Rdata')
 
-load(file= 'figure4.Rdata')
+load(file= 'output/figure4.Rdata')
 figure4
 
-ggsave('figure4.jpg', figure4,
+ggsave('output/figure4.jpg', figure4,
        width = 10,
        height = 6,
        dpi = 300)

@@ -18,9 +18,9 @@ boxplot(rgr_rcd ~ site, data = rgr_com.species) # using site as a random effect
 #                  thin = 1,
 #                 control = list(adapt_delta = 0.99)
 #                  )
-# save(rgr.RCD_treat, file= 'rgr.RCD_treat.Rdata')
+# save(rgr.RCD_treat, file= 'output/rgr.RCD_treat.Rdata')
 
-load(file = 'rgr.RCD_treat.Rdata')
+load(file = 'output/rgr.RCD_treat.Rdata')
 
 # pp_check
 color_scheme_set("darkgray")
@@ -46,9 +46,9 @@ conditional_effects(rgr.RCD_treat)
 #                     iter = 4000,
 #                     thin = 1
 # )
-# save(rgr.RCD_sp, file= 'rgr.RCD_sp.Rdata')
+# save(output/rgr.RCD_sp, file= 'rgr.RCD_sp.Rdata')
 
-load(file= 'rgr.RCD_sp.Rdata')
+load(file= 'output/rgr.RCD_sp.Rdata')
 
 # ppcheck
 color_scheme_set('darkgray')
@@ -76,9 +76,9 @@ conditional_effects(rgr.RCD_sp)
 #                     thin = 1,
 #                    control = list(adapt_delta = 0.999)
 # )
-# save(rgr.H_treat, file= 'rgr.H_treat.Rdata')
+# save(rgr.H_treat, file= 'output/rgr.H_treat.Rdata')
 
-load(file= 'rgr.H_treat.Rdata')
+load(file= 'output/rgr.H_treat.Rdata')
 
 # pp_check
 color_scheme_set("darkgray")
@@ -105,9 +105,9 @@ conditional_effects(rgr.H_treat)
 #                      iter = 4000,
 #                      thin = 1
 # )
-# save(rgr.H_sp, file= 'rgr.H_sp.Rdata')
+# save(output/rgr.H_sp, file= 'rgr.H_sp.Rdata')
 
-load(file= 'rgr.H_sp.Rdata')
+load(file= 'output/rgr.H_sp.Rdata')
 
 # ppcheck
 color_scheme_set('darkgray')
@@ -127,10 +127,10 @@ conditional_effects(rgr.H_sp)
 
 
 # df for plots----
-load(file = 'rgr.RCD_treat.Rdata')
-load(file= 'rgr.RCD_sp.Rdata')
-load(file= 'rgr.H_treat.Rdata')
-load(file= 'rgr.H_sp.Rdata')
+load(file = 'output/rgr.RCD_treat.Rdata')
+load(file= 'output/rgr.RCD_sp.Rdata')
+load(file= 'output/rgr.H_treat.Rdata')
+load(file= 'output/rgr.H_sp.Rdata')
 
 
 rgr.RCD_treat.ce <- conditional_effects(rgr.RCD_treat)
@@ -318,12 +318,12 @@ rgrh.d.sp
 figure5 <- (rgrrcd.a|rgrrcd.b.sp)/(rgrh.c|rgrh.d.sp)+ plot_layout(heights = c(10,10,2))
 figure5
 
-save(figure5, file= 'figure5.Rdata')
+save(figure5, file= 'output/figure5.Rdata')
 
-load(file= 'figure5.Rdata')
+load(file= 'output/figure5.Rdata')
 figure5
 
-ggsave('figure5.jpg', figure5,
+ggsave('output/figure5.jpg', figure5,
        width = 10,
        height = 6,
        dpi = 300)

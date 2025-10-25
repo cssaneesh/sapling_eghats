@@ -76,9 +76,9 @@ boxplot(N ~ village, data = alpha_sum_sd) # village as a random effect
 #     warmup = 1000,
 #     iter = 4000)
 # 
-# save(N.alpha, file= 'N.alpha.Rdata')
+# save(N.alpha, file= 'output/N.alpha.Rdata')
 # 
-load('N.alpha.Rdata')
+load('output/N.alpha.Rdata')
 
 mcmc_plot(N.alpha,
           type = "areas",
@@ -131,9 +131,9 @@ S.alpha <-
     warmup = 1000,
     iter = 4000
   )
-# save(S.alpha, file= 'S.alpha.Rdata')
+# save(S.alpha, file= 'output/S.alpha.Rdata')
 
-load('S.alpha.Rdata')
+load('output/S.alpha.Rdata')
 
 mcmc_plot(S.alpha,
           type = "areas",
@@ -186,9 +186,9 @@ alpha_sum_sd %>%
 #   iter = 5000#,
 #   # control = list(adapt_delta = 0.99, max_treedepth = 15)
 # )
-# save(Sn_alpha, file='Sn_alpha.Rdata')
+# save(Sn_alpha, file='output/Sn_alpha.Rdata')
 
-load('Sn_alpha.Rdata')
+load('output/Sn_alpha.Rdata')
 
 mcmc_plot(Sn_alpha,
           type = "areas",
@@ -250,9 +250,9 @@ hist(alpha_sum_sd$ENSPIE)
 #   iter = 4000,
 #   # control = list(adapt_delta = 0.9)
 # )
-# save(ENSPIE_alpha, file = 'ENSPIE_alpha.Rdata')
+# save(ENSPIE_alpha, file = 'output/ENSPIE_alpha.Rdata')
 
-load('ENSPIE_alpha.Rdata')
+load('output/ENSPIE_alpha.Rdata')
 
 mcmc_plot(object = ENSPIE_alpha, 
           type = 'areas', 
@@ -277,10 +277,10 @@ conditional_effects(ENSPIE_alpha, effects= 'LUI:Treatment')  # conditional effec
 
 
 # load models----
-load(file='N.alpha.Rdata')
-load(file='S.alpha.Rdata')
-load(file='Sn_alpha.Rdata')
-load(file='ENSPIE_alpha.Rdata')
+load(file='output/N.alpha.Rdata')
+load(file='output/S.alpha.Rdata')
+load(file='output/Sn_alpha.Rdata')
+load(file='output/ENSPIE_alpha.Rdata')
 
 # make df for figures----
 N.alpha.ce <- conditional_effects(N.alpha)
@@ -516,12 +516,12 @@ legendfig1 <- extract_legend(ENSPIE_legend) # extract_legend, a custom function
 
 figure2 <- (N|S)/(Sn|ENSPIE)/(legendfig1) + plot_layout(heights = c(10,10,2))
 
-save(figure2, file='figure2.Rdata')
+save(figure2, file='output/figure2.Rdata')
 
-load('figure2.Rdata')
+load('output/figure2.Rdata')
 figure2
 
-ggsave('figure2.jpg', figure2,
+ggsave('output/figure2.jpg', figure2,
        width = 10,
        height = 6,
        dpi = 300)
@@ -529,10 +529,10 @@ ggsave('figure2.jpg', figure2,
 
 # slope-----
 # load models
-load(file='N.alpha.Rdata')
-load(file='S.alpha.Rdata')
-load(file='Sn_alpha.Rdata')
-load(file='ENSPIE_alpha.Rdata')
+load(file='output/N.alpha.Rdata')
+load(file='output/S.alpha.Rdata')
+load(file='output/Sn_alpha.Rdata')
+load(file='output/ENSPIE_alpha.Rdata')
 
 # make dfs
 N.alpha_fitted.df <- cbind(N.alpha$data, fitted(N.alpha, re_formula = NA)) %>% 
@@ -889,13 +889,13 @@ figureS2 <- (N_slopeFig|S_slopeFig)/(Sn_slopeFig|ENSPIE_slopeFig) + plot_layout(
 
 figureS2
 
-save(figureS2, file='figureS2.Rdata')
+save(figureS2, file='output/figureS2.Rdata')
 
-load('figureS2.Rdata')
+load('output/figureS2.Rdata')
 
 figureS2
 
-ggsave('figureS2.jpg', figureS2,
+ggsave('output/figureS2.jpg', figureS2,
        width = 10,
        height = 6,
        dpi = 300)
