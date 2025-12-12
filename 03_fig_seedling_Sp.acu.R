@@ -148,7 +148,7 @@ acc.curve
                  "CPFA" = "#21908c",
                  "CAFA" = "#fde725"),
       labels = c("Control" = "Both present",
-                 "CPFA" = "Fire present",
+                 "CPFA" = "Fire excluded",
                  "CAFA" = "Both excluded")
     )
 

@@ -172,7 +172,7 @@ prop_treat <- ggplot() +
     # The 'breaks' argument should list your original factor levels
     breaks = c("Control", "CPFA", "CAFA"),
     # The 'labels' argument provides the new names in the same order
-    labels = c("Both present", "Fire present", "Both excluded")
+    labels = c("Both present", "Fire excluded", "Both excluded")
   )
 
 

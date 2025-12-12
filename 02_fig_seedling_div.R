@@ -506,7 +506,7 @@ ENSPIE_legend <- ENSPIE + theme(legend.position="bottom")+
                "CPFA" = "#21908c",
                "CAFA" = "#fde725"),
     labels = c("Control" = "Both present",
-               "CPFA" = "Fire present",
+               "CPFA" = "Fire excluded",
                "CAFA" = "Both excluded")
   )
 
@@ -778,7 +778,7 @@ N_slopeFig <- ggplot()+
     # The 'breaks' argument should list your original factor levels
     breaks = c("Control", "CPFA", "CAFA"),
     # The 'labels' argument provides the new names in the same order
-    labels = c("Both present", "Fire present", "Both excluded")
+    labels = c("Both present", "Fire excluded", "Both excluded")
   )
 
 N_slopeFig
@@ -805,7 +805,7 @@ S_slopeFig <- ggplot()+
     # The 'breaks' argument should list your original factor levels
     breaks = c("Control", "CPFA", "CAFA"),
     # The 'labels' argument provides the new names in the same order
-    labels = c("Both present", "Fire present", "Both excluded")
+    labels = c("Both present", "Fire excluded", "Both excluded")
   )
 
 S_slopeFig
@@ -832,7 +832,7 @@ Sn_slopeFig <- ggplot()+
     # The 'breaks' argument should list your original factor levels
     breaks = c("Control", "CPFA", "CAFA"),
     # The 'labels' argument provides the new names in the same order
-    labels = c("Both present", "Fire present", "Both excluded")
+    labels = c("Both present", "Fire excluded", "Both excluded")
   )
 
 Sn_slopeFig
@@ -859,7 +859,7 @@ ENSPIE_slopeFig <- ggplot()+
     # The 'breaks' argument should list your original factor levels
     breaks = c("Control", "CPFA", "CAFA"),
     # The 'labels' argument provides the new names in the same order
-    labels = c("Both present", "Fire present", "Both excluded")
+    labels = c("Both present", "Fire excluded", "Both excluded")
   )+
   # Use scale_color_manual to define the new legend labels
   scale_color_manual(
@@ -869,7 +869,7 @@ ENSPIE_slopeFig <- ggplot()+
                "CPFA" = "#21908c",
                "CAFA" = "#fde725"),
     labels = c("Control" = "Both present",
-               "CPFA" = "Fire present",
+               "CPFA" = "Fire excluded",
                "CAFA" = "Both excluded")
   )
 

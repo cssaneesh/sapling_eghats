@@ -122,7 +122,7 @@ figureS3 <- seedling.dat %>%
     
     # 1. Correctly provide the NEW TEXT labels (what you want to see)
     labels = c("Control" = "Both present",
-               "CPFA" = "Fire present",
+               "CPFA" = "Fire excluded",
                "CAFA" = "Both excluded"),
     
     # 2. **CRITICAL FIX:** Explicitly provide the COLORS (the values)
